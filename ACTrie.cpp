@@ -19,16 +19,6 @@ template <char TrieMinChar, char TrieMaxChar, bool IsCaseInsensetive>
 ACTrie<TrieMinChar, TrieMaxChar, IsCaseInsensetive>::ACTrie() {
     nodes_.reserve(kDefaultNodesCapacity);
     nodes_.resize(kDefaultNodesCount);
-    /*
-     * link(root) = fake_vertex;
-     * For all chars from the alphabet: fake_vertex ---char--> root
-     */
-    nodes_[kRootIndex].suffix_link = kFakePreRootIndex;
-    nodes_[kRootIndex].compressed_suffix_link = kRootIndex;
-
-    auto& fake_node = nodes_[kFakePreRootIndex];
-    std::fill(fake_node.edges, fake_node.edges + std::size(fake_node.edges),
-              kRootIndex);
 }
 
 template <char TrieMinChar, char TrieMaxChar, bool IsCaseInsensetive>
@@ -46,7 +36,7 @@ bool ACTrie<TrieMinChar, TrieMaxChar, IsCaseInsensetive>::ContainsPattern(
         }
 
         vertex_index_t next_node_index =
-            nodes_[current_node_index].edges[CharToIndex(sigma)];
+            nodes_[current_node_index][CharToIndex(sigma)];
         if (next_node_index != kNullNodeIndex) {
             current_node_index = next_node_index;
         } else {
@@ -64,45 +54,72 @@ void ACTrie<TrieMinChar, TrieMaxChar, IsCaseInsensetive>::ComputeLinks() {
     /*
      * See MIPT lecture https://youtu.be/MEFrIcGsw1o for more info
      *
-     * For each char (marked as sigma) in the Alphabet:
-     *   v := root_eges[sigma] <=> to((root, sigma))
+     * Let's denote 'Q' to be the finite set of states
+     * Let's denote 'v' to be the state ∈ Q (practically, a vertex in the
+     * automaton's graph) Let's denote 'root' to be the start state
+     * (practically, a root vertex in the automaton's graph) Let's denote 'Σ' to
+     * be the automaton's alphabet Let's denote 'σ' be any symbol ∈ Σ Let's
+     * denote 'to' to be the transition function (often written as δ) to: Q x Σ
+     * -> Q, initially may not be a total function
      *
-     *   root_edges[c] = root_edges[c] ? root_edegs[c] : root
-     *   <=>
-     *   to((root, sigma)) = to((root, sigma)) if (root, sigma) in rng(to)
-     * else root
+     * Let's denote 'link' to be a suffix link function (defines suffix link for
+     * each state / vertex) Let's denote 'compressed_suffix_link' to be a
+     * compressed suffix link function (defines compressed suffix link for each
+     * state / vertex)
      *
-     *   link(v) = root (if v aka to((root, sigma)) exists)
      *
-     *   rood_edges[sigma].compressed_suffix_link = root
+     * After adding patterns 'to' may not be a total function.
+     * Steps to make 'to' a total function (with domain = Q x Σ):
+     *
+     * 1)
+     *   ∀ σ ∈ Σ: to(fake_preroot, σ) = root
+     *
+     *   link(root) = fake_preroot
+     *   compressed_suffix_link(root) = root
+     *
+     * 2) For all σ ∈ Σ:
+     *
+     *                            /
+     *                           / to(root, σ) if to(root, σ) is defined
+     *   ∀ σ ∈ Σ: to(root, σ) = {
+     *                           \ root, otherwise
+     *                            \
+     *
+     *                                   /
+     *                                 / root, if to(root, σ) is initially
+     * defined ∀ σ ∈ Σ: link(to(root, σ)) = { \ link(root), if to(root, σ) was
+     * not initially defined
+     *                                  \
+     *
+     *   ∀ σ ∈ Σ: compressed_suffix_link(to(root, σ)) = root
      */
+
+    nodes_[kRootIndex].suffix_link = kFakePreRootIndex;
+    nodes_[kRootIndex].compressed_suffix_link = kRootIndex;
+
+    nodes_[kFakePreRootIndex].edges.fill(kRootIndex);
 
     // Run BFS through all nodes.
     std::deque<vertex_index_t> bfs_queue;
     bfs_queue.push_back(kRootIndex);
 
     do {
-        vertex_index_t next_vertex_index = bfs_queue.front();
+        // In the comments this node is called 'v'
+        vertex_index_t vertex_index = bfs_queue.front();
         bfs_queue.pop_front();
 
-        // to(v, sigma) === vertex.edges[sigma]
-        vertex_index_t* vertex_edges = nodes_[next_vertex_index].edges;
-        vertex_index_t vertex_suffix_link =
-            nodes_[next_vertex_index].suffix_link;
+        // vertex_suffix_link_node = to((link(v), sigma))
+        ACTNode& node = nodes_[vertex_index];
+        const ACTNode& vertex_suffix_link_node = nodes_[node.suffix_link];
 
-        assert(vertex_suffix_link != kNullNodeIndex);
-        // to((link(v), sigma)) === nodes[vertex.suffix_link].edges[sigma]
-        const vertex_index_t* vertex_suffix_link_edges =
-            nodes_[vertex_suffix_link].edges;
-
-        // For each char (sigma) in the Alphabet vertex_edges[sigma] is the
-        // child such: v --sigma--> child
+        // For each char (sigma) in the Alphabet vertex_suffix_link_node[sigma]
+        // is the child such: v --sigma--> child
         for (size_t sigma = 0; sigma != kAlphabetLength; ++sigma) {
-            vertex_index_t child_link_v_index = vertex_suffix_link_edges[sigma];
+            vertex_index_t child_link_v_index = vertex_suffix_link_node[sigma];
             assert(child_link_v_index != kNullNodeIndex);
 
-            // child = to(v, sigma)
-            vertex_index_t child_index = vertex_edges[sigma];
+            // child_index = to(v, sigma)
+            vertex_index_t child_index = node[sigma];
 
             // to((v, sigma)) = to((v, sigma)) if (v, sigma) in the rng(to)
             // else to((link(v), sigma)) rng(to) is a range of function 'to'
@@ -117,14 +134,14 @@ void ACTrie<TrieMinChar, TrieMaxChar, IsCaseInsensetive>::ComputeLinks() {
                 // comp(v) = link(v) if link(v) is terminal or root else
                 // comp(link(v))
                 nodes_[child_index].compressed_suffix_link =
-                    ((!nodes_[child_link_v_index].IsTerminal()) &
-                     (child_link_v_index != kRootIndex))
+                    (!nodes_[child_link_v_index].IsTerminal() &&
+                     child_link_v_index != kRootIndex)
                         ? nodes_[child_link_v_index].compressed_suffix_link
                         : child_link_v_index;
 
                 bfs_queue.push_back(child_index);
             } else {
-                vertex_edges[sigma] = child_link_v_index;
+                node[sigma] = child_link_v_index;
             }
         }
     } while (!bfs_queue.empty());
@@ -152,7 +169,7 @@ void ACTrie<TrieMinChar, TrieMaxChar, IsCaseInsensetive>::AddPattern(
         }
 
         vertex_index_t next_node_index =
-            nodes_[current_node_index].edges[CharToIndex(sigma)];
+            nodes_[current_node_index][CharToIndex(sigma)];
         if (next_node_index != kNullNodeIndex) {
             current_node_index = next_node_index;
         } else {
@@ -179,7 +196,7 @@ void ACTrie<TrieMinChar, TrieMaxChar, IsCaseInsensetive>::AddPattern(
         }
 
         nodes_.emplace_back();
-        nodes_[current_node_index].edges[CharToIndex(sigma)] = new_node_index;
+        nodes_[current_node_index][CharToIndex(sigma)] = new_node_index;
         current_node_index = new_node_index++;
     }
 
@@ -214,8 +231,7 @@ void ACTrie<TrieMinChar, TrieMaxChar, IsCaseInsensetive>::RunText(
             continue;
         }
 
-        current_node_index =
-            nodes_[current_node_index].edges[CharToIndex(sigma)];
+        current_node_index = nodes_[current_node_index][CharToIndex(sigma)];
         assert(current_node_index != kNullNodeIndex);
         if (nodes_[current_node_index].IsTerminal()) {
             size_t word_index = nodes_[current_node_index].word_index;

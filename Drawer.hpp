@@ -29,7 +29,6 @@ public:
 
     [[nodiscard]] bool ShouldClose() const noexcept;
     void Render();
-    [[nodiscard]] bool InitFailed() const noexcept;
     ObserverType* GetObserverPort() noexcept;
 
 private:

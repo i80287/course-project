@@ -86,8 +86,6 @@ bool Drawer::ShouldClose() const noexcept {
     return bool(glfwWindowShouldClose(window_));
 }
 
-bool Drawer::InitFailed() const noexcept { return init_failed_; }
-
 Drawer::ObserverType* Drawer::GetObserverPort() noexcept { return &port_; }
 
 void Drawer::Render() {
@@ -170,7 +168,6 @@ void Drawer::UpdateState() {
 
 void Drawer::OnError(std::string_view msg) noexcept {
     puts(msg.data());
-    init_failed_ = true;
 }
 
 }  // namespace AppSpace

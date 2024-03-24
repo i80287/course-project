@@ -13,8 +13,6 @@ class App {
 public:
     App();
     void Run();
-    [[nodiscard]] bool InitFailed() const noexcept;
-
 private:
     Drawer view_;
     ModelType model_;

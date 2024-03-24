@@ -69,25 +69,24 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         
     endif()
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    # target_compile_options(vis_actrie_app PRIVATE 
-    #     -Wall
-    #     -Wextra
-    #     -Wpedantic
-    #     -Wunused
-    #     -pedantic-errors
-    #     -Wconversion
-    #     -Wunsafe-loop-optimizations
-    #     -Wshadow
-    #     -Wnull-dereference
-    #     -Wundef
-    #     -Wwrite-strings
-    #     -Wsign-conversion
-    #     -Warith-conversion
-    #     -Wmissing-noreturn
-    #     -Wunreachable-code
-    #     -Wcast-align
-    #     -Warray-bounds=2
-    # )
+    target_compile_options(vis_actrie_app PRIVATE 
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wunused
+        -pedantic-errors
+        -Wconversion
+        -Wunsafe-loop-optimizations
+        -Wshadow
+        -Wnull-dereference
+        -Wundef
+        -Wwrite-strings
+        -Wsign-conversion
+        -Wmissing-noreturn
+        -Wunreachable-code
+        -Wcast-align
+        -Warray-bounds=2
+    )
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
 
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")

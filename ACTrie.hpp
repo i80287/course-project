@@ -1,11 +1,11 @@
 #pragma once
 
-#include <climits>      // CHAR_MAX
-#include <cstdint>      // std::uint32_t, std::size_t
-#include <cstring>      // std::memset
-#include <iterator>     // std::size
-#include <string_view>  // std::string_view
-#include <vector>       // std::vector
+#include <array>
+#include <climits>
+#include <cstdint>
+#include <iterator>
+#include <string_view>
+#include <vector>
 
 #include "Observable.hpp"
 #include "app_config.hpp"
@@ -56,10 +56,10 @@ public:
                   kDefaultNodesCount);
 
     struct ACTNode {
-        static constexpr uint32_t kMissingSentiel = uint32_t(-1);
+        static constexpr uint32_t kMissingWord = uint32_t(-1);
 
         // Indexes in array of nodes
-        vertex_index_t edges[kAlphabetLength];
+        std::array<vertex_index_t, kAlphabetLength> edges{vertex_index_t(kNullNodeIndex)};
 
         // Index in array of nodes
         vertex_index_t suffix_link = kNullNodeIndex;
@@ -69,17 +69,22 @@ public:
 
         /*
          * Index of the word in the ac trie which ends on this
-         * kMissingSentiel if node is not terminal
+         * kMissingWord if node is not terminal
          */
-        uint32_t word_index = kMissingSentiel;
+        uint32_t word_index = kMissingWord;
 
-        ACTNode() noexcept {
-            std::fill(edges, edges + std::size(edges),
-                      uint32_t(kNullNodeIndex));
+        vertex_index_t operator[](size_t sigma) const noexcept {
+            assert(sigma < kAlphabetLength);
+            return edges[sigma];
+        }
+
+        vertex_index_t& operator[](size_t sigma) noexcept {
+            assert(sigma < kAlphabetLength);
+            return edges[sigma];
         }
 
         [[nodiscard]] constexpr bool IsTerminal() const noexcept {
-            return word_index != kMissingSentiel;
+            return word_index != kMissingWord;
         }
     };
 
