@@ -109,8 +109,9 @@ private:
     constexpr bool IsReady() const noexcept;
     static VertexIndex SymbolToIndex(char symbol) noexcept;
     static void ComputeLinksForNodes(std::vector<ACTNode>&);
-    static void ComputeLinksForNode(ACTNode&, std::vector<ACTNode>&,
-                                    std::queue<VertexIndex>&);
+    static void ComputeLinksForNodeChildren(ACTNode&,
+                                            std::vector<ACTNode>&,
+                                            std::queue<VertexIndex>&);
     bool IsACTrieInCorrectState() const;
     bool IsFakePrerootInCorrectState() const;
 
