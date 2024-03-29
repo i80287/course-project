@@ -35,7 +35,7 @@ private:
     BadInputObserver bad_input_port_;
     Observable<Pattern> user_pattern_input_port_;
     Observable<Text> user_text_input_port_;
-    bool suppressor_ = false;
+    bool suppressor_flag_ = false;
 };
 
 }  // namespace AppSpace
