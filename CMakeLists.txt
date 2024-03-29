@@ -52,9 +52,6 @@ include_directories(${PROJECT_SOURCE_DIR}
 
 target_link_libraries(vis_actrie_app glad glfw)
 
-message(STATUS "CMAKE_C_FLAGS: ${CMAKE_C_FLAGS}")
-message(STATUS "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
-
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
 
@@ -64,9 +61,11 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
     endif()
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_definitions(vis_actrie_app PRIVATE
+        _GLIBCXX_DEBUG
+        _GLIBCXX_DEBUG_PEDANTIC
+    )
     target_compile_options(vis_actrie_app PRIVATE
-        -D_GLIBCXX_DEBUG
-        -D_GLIBCXX_DEBUG_PEDANTIC
         -fstack-protector-all
         -Wall
         -Wextra
@@ -94,3 +93,6 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 
 endif()
+
+get_target_property(ACTRIE_APP_CXXFLAGS vis_actrie_app COMPILE_OPTIONS)
+message(STATUS "Current c++ compilation flags: ${ACTRIE_APP_CXXFLAGS}")

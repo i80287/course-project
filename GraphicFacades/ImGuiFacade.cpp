@@ -1,4 +1,4 @@
-#include "ImguiFacade.hpp"
+#include "ImGuiFacade.hpp"
 
 #include <stdexcept>
 

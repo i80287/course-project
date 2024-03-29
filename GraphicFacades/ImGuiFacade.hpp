@@ -1,3 +1,5 @@
+#pragma once
+
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
@@ -6,7 +8,7 @@
 
 namespace AppSpace::GraphicFacades {
 
-class ImGuiFacade {
+class ImGuiFacade final {
 public:
     ImGuiFacade();
     ImGuiFacade(const ImGuiFacade&)            = delete;
