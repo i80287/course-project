@@ -11,9 +11,7 @@
 
 #include "Observer.hpp"
 
-namespace AppSpace {
-
-namespace ACTrieDS {
+namespace AppSpace::ACTrieDS {
 
 class ACTrie final {
 public:
@@ -137,6 +135,4 @@ private:
     Observable<BadInputSendData> bad_input_port_;
 };
 
-}  // namespace ACTrieDS
-
-}  // namespace AppSpace
+}  // namespace AppSpace::ACTrieDS

@@ -8,9 +8,7 @@
 #include <string>
 #include <string_view>
 
-namespace AppSpace {
-
-namespace ACTrieDS {
+namespace AppSpace::ACTrieDS {
 
 ACTrie::ACTrie() {
     nodes_.reserve(kDefaultNodesCapacity);
@@ -253,8 +251,7 @@ bool ACTrie::IsACTrieInCorrectnessState() const {
             return false;
         if (!is_index_correct(iter->compressed_suffix_link))
             return false;
-        if (iter->IsTerminal() &&
-            iter->word_index >= words_lengths_.size())
+        if (iter->IsTerminal() && iter->word_index >= words_lengths_.size())
             return false;
     }
 
@@ -269,6 +266,4 @@ void ACTrie::Subscribe(Observer<BadInputSendData>* observer) {
     bad_input_port_.Subscribe(observer);
 }
 
-}  // namespace ACTrieDS
-
-}  // namespace AppSpace
+}  // namespace AppSpace::ACTrieDS
