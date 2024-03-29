@@ -15,10 +15,11 @@ ACTrie::ACTrie() {
     nodes_.resize(kDefaultNodesCount);
 }
 
-void ACTrie::ResetACTrie() {
+ACTrie& ACTrie::ResetACTrie() {
     nodes_.clear();
     words_lengths_.clear();
     nodes_.resize(kDefaultNodesCapacity);
+    return *this;
 }
 
 void ACTrie::ComputeLinksForNode(ACTNode& node,
@@ -124,7 +125,7 @@ void ACTrie::ComputeLinksForNodes() {
     assert(IsACTrieInCorrectnessState());
 }
 
-void ACTrie::AddPattern(std::string_view pattern) {
+ACTrie& ACTrie::AddPattern(std::string_view pattern) {
     if (IsReady()) {
         ResetACTrie();
     }
@@ -133,7 +134,7 @@ void ACTrie::AddPattern(std::string_view pattern) {
         const char symbol = pattern[i];
         if (SymbolToIndex(symbol) >= kAlphabetLength) {
             bad_input_port_.SetDataAndNotify({i, symbol});
-            return;
+            return *this;
         }
     }
 
@@ -165,9 +166,10 @@ void ACTrie::AddPattern(std::string_view pattern) {
     nodes_[current_node_index].word_index =
         word_length_t(words_lengths_.size());
     words_lengths_.push_back(word_length_t(pattern.size()));
+    return *this;
 }
 
-void ACTrie::FindForAllSubstringsInText(std::string_view text) {
+ACTrie& ACTrie::FindAllSubstringsInText(std::string_view text) {
     if (!IsReady()) {
         ComputeLinksForNodes();
     }
@@ -220,6 +222,8 @@ void ACTrie::FindForAllSubstringsInText(std::string_view text) {
             });
         }
     }
+
+    return *this;
 }
 
 bool ACTrie::IsACTrieInCorrectnessState() const {
@@ -258,12 +262,14 @@ bool ACTrie::IsACTrieInCorrectnessState() const {
     return true;
 }
 
-void ACTrie::Subscribe(Observer<FoundSubstringSendData>* observer) {
+ACTrie& ACTrie::Subscribe(Observer<FoundSubstringSendData>* observer) {
     found_substrings_port_.Subscribe(observer);
+    return *this;
 }
 
-void ACTrie::Subscribe(Observer<BadInputSendData>* observer) {
+ACTrie& ACTrie::Subscribe(Observer<BadInputSendData>* observer) {
     bad_input_port_.Subscribe(observer);
+    return *this;
 }
 
 }  // namespace AppSpace::ACTrieDS
