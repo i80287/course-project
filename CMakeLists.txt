@@ -21,14 +21,7 @@ set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
-set(HEADER_FILES
-    "${PROJECT_SOURCE_DIR}/ACTrie.hpp"
-    "${PROJECT_SOURCE_DIR}/App.hpp"
-    "${PROJECT_SOURCE_DIR}/Drawer.hpp"
-    "${PROJECT_SOURCE_DIR}/glad_fix.hpp"
-    "${PROJECT_SOURCE_DIR}/SendTypeHelper.hpp")
-
-add_library(glad "${GLAD_DIR}/src/glad.c" "${GLAD_INCLUDE_DIR}/glad/glad.h")
+add_library(glad "${GLAD_DIR}/src/glad.c")
 target_include_directories(glad PUBLIC include/)
 
 add_subdirectory(external/glfw)
@@ -39,6 +32,7 @@ add_executable(vis_actrie_app
     App.cpp
     ACTrie.cpp
     Drawer.cpp
+    React.cpp
     "${IMGUI_DIR}/imgui.cpp"
     "${IMGUI_DIR}/imgui_demo.cpp"
     "${IMGUI_DIR}/imgui_draw.cpp"
@@ -46,7 +40,6 @@ add_executable(vis_actrie_app
     "${IMGUI_DIR}/imgui_widgets.cpp"
     "${IMGUI_DIR}/backends/imgui_impl_glfw.cpp"
     "${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp"
-    ${HEADER_FILES}
 )
 
 include_directories(${PROJECT_SOURCE_DIR}
@@ -70,12 +63,19 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
     endif()
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(vis_actrie_app PRIVATE 
+    target_compile_options(vis_actrie_app PRIVATE
+        -D_GLIBCXX_DEBUG
+        -D_GLIBCXX_DEBUG_PEDANTIC
+        -fstack-protector-all
         -Wall
         -Wextra
+        -Wfloat-equal
+        -Wlogical-op
+        -Wcast-qual
         -Wpedantic
+        -Wshift-overflow=2
+        -Wduplicated-cond
         -Wunused
-        -pedantic-errors
         -Wconversion
         -Wunsafe-loop-optimizations
         -Wshadow
@@ -86,7 +86,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         -Wmissing-noreturn
         -Wunreachable-code
         -Wcast-align
-        -Warray-bounds=2
+        -Warray-bounds
     )
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
 
