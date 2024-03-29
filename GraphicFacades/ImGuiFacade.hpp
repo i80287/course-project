@@ -32,7 +32,7 @@ private:
         glfw_facade_.UpdateWindowContext();
     }
 
-    class ImGuiContextManager {
+    class ImGuiContextManager final {
     public:
         ImGuiContextManager();
         ~ImGuiContextManager();
@@ -43,7 +43,7 @@ private:
         ImGuiContextManager& operator=(ImGuiContextManager&&) = delete;
     };
 
-    class ImGuiBinder {
+    class ImGuiBinder final {
     public:
         ImGuiBinder(GLFWFacade& glfw_facade);
         ~ImGuiBinder();

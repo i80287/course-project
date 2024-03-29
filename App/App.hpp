@@ -7,7 +7,7 @@
 
 namespace AppSpace {
 
-class App {
+class App final {
     using ModelType = ACTrieDS::ACTrie;
 
 public:

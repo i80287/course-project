@@ -13,7 +13,7 @@ template <class TData, class SendTDataBy = SendTypeHelper<TData>>
 class Observable;
 
 template <class TData>
-class Observer {
+class Observer final {
     friend class Observable<TData>;
     using ObservableType = Observable<TData>;
 
@@ -51,7 +51,7 @@ private:
 };
 
 template <class TData, class SendTDataBy>
-class Observable {
+class Observable final {
     friend class Observer<TData>;
 
 public:

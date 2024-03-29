@@ -5,7 +5,7 @@
 
 namespace AppSpace::Controller {
 
-class ACTrieController {
+class ACTrieController final {
     using ACTrieModel = ACTrieDS::ACTrie;
     using Pattern = ACTrieModel::Pattern;
     using Text = ACTrieModel::Text;
