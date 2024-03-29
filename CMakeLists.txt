@@ -28,10 +28,11 @@ add_subdirectory(external/glfw)
 
 add_executable(vis_actrie_app
     main.cpp
-    App.cpp
-    ACTrie.cpp
-    Drawer.cpp
-    React.cpp
+    App/App.cpp
+    App/ACTrie.cpp
+    App/Drawer.cpp
+    App/ACTrieController.cpp
+    App/React.cpp
     GraphicFacades/GLFWFacade.cpp
     GraphicFacades/ImGuiFacade.cpp
     "${IMGUI_DIR}/imgui.cpp"

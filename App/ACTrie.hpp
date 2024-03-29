@@ -2,8 +2,8 @@
 
 #include <array>
 #include <cassert>
+#include <cctype>
 #include <cstdint>
-#include <iterator>
 #include <limits>
 #include <queue>
 #include <string_view>
@@ -15,8 +15,10 @@ namespace AppSpace::ACTrieDS {
 
 class ACTrie final {
 public:
-    using vertex_index_t = std::uint32_t;
-    using word_length_t  = std::uint32_t;
+    using VertexIndex = std::uint32_t;
+    using WordLength  = std::uint32_t;
+    using Pattern     = std::string_view;
+    using Text        = std::string_view;
 
     static constexpr bool kIsCaseInsensetive = false;
     static constexpr char kAlphabetStart     = 'A';
@@ -25,32 +27,31 @@ public:
         kAlphabetEnd - kAlphabetStart + 1;
 
     struct ACTNode {
-        static constexpr word_length_t kMissingWord =
-            std::numeric_limits<word_length_t>::max();
+        static constexpr WordLength kMissingWord =
+            std::numeric_limits<WordLength>::max();
 
         // Indexes in array of nodes
-        std::array<vertex_index_t, kAlphabetLength> edges{kNullNodeIndex};
+        std::array<VertexIndex, kAlphabetLength> edges{kNullNodeIndex};
 
         // Index in array of nodes
-        vertex_index_t suffix_link = kNullNodeIndex;
+        VertexIndex suffix_link = kNullNodeIndex;
 
         // Index in array of nodes
-        vertex_index_t compressed_suffix_link = kNullNodeIndex;
+        VertexIndex compressed_suffix_link = kNullNodeIndex;
 
         /*
          * Index of the word in the ac trie which ends on this
          * kMissingWord if node is not terminal
          */
-        word_length_t word_index = kMissingWord;
+        WordLength word_index = kMissingWord;
 
-        [[nodiscard]] vertex_index_t operator[](
+        [[nodiscard]] VertexIndex operator[](
             std::size_t index) const noexcept {
             assert(index < kAlphabetLength);
             return edges[index];
         }
 
-        [[nodiscard]] vertex_index_t& operator[](
-            std::size_t index) noexcept {
+        [[nodiscard]] VertexIndex& operator[](std::size_t index) noexcept {
             assert(index < kAlphabetLength);
             return edges[index];
         }
@@ -62,27 +63,28 @@ public:
 
     enum class DataStatus : std::uint32_t { kFoundNewSubstring };
 
-    struct FoundSubstringSendData {
+    struct FoundSubstringInfo {
         std::reference_wrapper<const std::vector<ACTNode>> nodes;
-        std::reference_wrapper<const std::vector<word_length_t>> words_lengths;
+        std::reference_wrapper<const std::vector<WordLength>>
+            words_lengths;
         DataStatus status{};
-        std::string_view found_substring{};
+        Pattern found_substring{};
         std::size_t substring_start_index{};
-        vertex_index_t current_vertex_index{};
+        VertexIndex current_vertex_index{};
     };
 
-    struct BadInputSendData {
+    struct BadInputPatternInfo {
         std::size_t symbol_index{};
         char bad_symbol{};
     };
 
     ACTrie();
-    ACTrie& AddPattern(std::string_view pattern);
-    bool ContainsPattern(std::string_view pattern) const noexcept;
-    ACTrie& FindAllSubstringsInText(std::string_view text);
+    ACTrie& AddPattern(Pattern pattern);
+    bool ContainsPattern(Pattern pattern) const noexcept;
+    ACTrie& FindAllSubstringsInText(Text text);
     ACTrie& ResetACTrie();
-    ACTrie& Subscribe(Observer<FoundSubstringSendData>* observer);
-    ACTrie& Subscribe(Observer<BadInputSendData>* observer);
+    ACTrie& AddSubscriber(Observer<FoundSubstringInfo>* observer);
+    ACTrie& AddSubscriber(Observer<BadInputPatternInfo>* observer);
 
     constexpr std::size_t NodesSize() const noexcept {
         return nodes_.size();
@@ -93,35 +95,37 @@ public:
 
 private:
     static constexpr std::size_t kDefaultNodesCapacity = 16;
-    static constexpr vertex_index_t kNullNodeIndex     = 0;
-    static constexpr vertex_index_t kFakePreRootIndex = kNullNodeIndex + 1;
-    static constexpr vertex_index_t kRootIndex = kFakePreRootIndex + 1;
-    static constexpr vertex_index_t kDefaultNodesCount = kRootIndex + 1;
+    static constexpr VertexIndex kNullNodeIndex        = 0;
+    static constexpr VertexIndex kFakePreRootIndex = kNullNodeIndex + 1;
+    static constexpr VertexIndex kRootIndex        = kFakePreRootIndex + 1;
+    static constexpr VertexIndex kDefaultNodesCount = kRootIndex + 1;
 
-    static vertex_index_t SymbolToIndex(char symbol) noexcept {
+    static VertexIndex SymbolToIndex(char symbol) noexcept {
         std::int32_t symbol_as_int = static_cast<std::uint8_t>(symbol);
         if constexpr (kIsCaseInsensetive) {
             symbol_as_int = std::tolower(symbol_as_int);
         }
 
-        return static_cast<vertex_index_t>(symbol_as_int) - kAlphabetStart;
+        return static_cast<VertexIndex>(symbol_as_int) - kAlphabetStart;
     }
 
     constexpr bool IsReady() const noexcept {
         return is_ready_;
     }
 
-    void ComputeLinksForNodes();
+    ACTrie& ComputeLinksForNodes();
 
-    void ComputeLinksForNode(ACTNode&, std::queue<vertex_index_t>&);
+    void ComputeLinksForNode(ACTNode&, std::queue<VertexIndex>&);
 
-    bool IsACTrieInCorrectnessState() const;
+    bool IsACTrieInCorrectState() const;
 
     std::vector<ACTNode> nodes_;
-    std::vector<word_length_t> words_lengths_;
+    std::vector<WordLength> words_lengths_;
     bool is_ready_ = false;
-    Observable<FoundSubstringSendData> found_substrings_port_;
-    Observable<BadInputSendData> bad_input_port_;
+    Observable<FoundSubstringInfo> found_substrings_port_;
+    Observable<BadInputPatternInfo> bad_input_port_;
+    Observer<Pattern> pattern_in_port_;
+    Observer<Text> text_in_port_;
 };
 
 }  // namespace AppSpace::ACTrieDS

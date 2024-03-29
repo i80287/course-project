@@ -15,18 +15,15 @@ class Observable;
 template <class TData>
 class Observer {
     friend class Observable<TData>;
-    using ObservableType = Observable<TData>;    
+    using ObservableType = Observable<TData>;
 
 public:
     using SendTDataBy   = SendTypeHelper<TData>;
     using CallSignature = void(SendTDataBy);
 
-    template <class TOnSubscribe, class TOnNotify, class TOnUnsbscribe>
-    Observer(TOnSubscribe&& on_subscribe, TOnNotify&& on_notify,
-             TOnUnsbscribe&& on_unsubscribe) noexcept
-        : on_subscribe_(std::forward<TOnSubscribe>(on_subscribe)),
-          on_notify_(std::forward<TOnNotify>(on_notify)),
-          on_unsubscribe_(std::forward<TOnUnsbscribe>(on_unsubscribe)) {}
+    template <class TOnNotify>
+    Observer(TOnNotify&& on_notify) noexcept
+        : on_notify_(std::forward<TOnNotify>(on_notify)) {}
 
     Observer(const Observer&)            = delete;
     Observer& operator=(const Observer&) = delete;
@@ -50,18 +47,19 @@ private:
     }
 
     ObservableType* observable_ = nullptr;
-    std::function<void(SendTDataBy)> on_subscribe_;
     std::function<void(SendTDataBy)> on_notify_;
-    std::function<void(SendTDataBy)> on_unsubscribe_;
 };
 
 template <class TData, class SendTDataBy>
 class Observable {
     friend class Observer<TData>;
-public:
-    using ObserverType    = Observer<TData>;
 
-    constexpr Observable() noexcept(std::is_nothrow_constructible_v<decltype(data_)> && std::is_nothrow_constructible_v<decltype(listeners_)>) = default;
+public:
+    using ObserverType = Observer<TData>;
+
+    constexpr Observable() noexcept(
+        std::is_nothrow_constructible_v<decltype(data_)> &&
+        std::is_nothrow_constructible_v<decltype(listeners_)>) = default;
 
     template <class UniTData = TData>
     explicit Observable(UniTData&& data) noexcept(
@@ -85,7 +83,7 @@ public:
         listeners_.push_back(observer);
         observer->SetObservable(this);
         if (data_.has_value())
-            observer->on_subscribe_(*data_);
+            observer->on_notify_(*data_);
     }
 
     void UnsubscribeAll() {
@@ -121,7 +119,7 @@ private:
     void Detach_(ObserverType* observer) {
         assert(observer);
         if (data_.has_value())
-            observer->on_unsubscribe_(*data_);
+            observer->on_notify_(*data_);
         listeners_.remove(observer);
     }
 

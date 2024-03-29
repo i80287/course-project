@@ -1,30 +1,38 @@
 #pragma once
 
+#include <cassert>
+
 #include "GladFix.hpp"
 
 namespace AppSpace::GraphicFacades {
 
 class GLFWFacade final {
 public:
-    GLFWFacade(int window_width = 1280, int window_height = 720,
-               const char* window_title = "app");
-    GLFWFacade(const GLFWFacade&)            = delete;
-    GLFWFacade(GLFWFacade&&)                 = delete;
-    GLFWFacade& operator=(const GLFWFacade&) = delete;
-    GLFWFacade& operator=(GLFWFacade&&)      = delete;
+    GLFWFacade(int window_width         = kDefaultWindowWidth,
+               int window_height        = kDefaultWindowHeight,
+               const char* window_title = kDefaultWindowTitle);
 
     constexpr GLFWwindow* GetWindow() noexcept {
         return window_manager_.GetWindow();
     }
 
+    bool ShouldClose() noexcept {
+        auto window = GetWindow();
+        assert(window != nullptr);
+        return static_cast<bool>(glfwWindowShouldClose(window));
+    }
+
     void PollEvents() noexcept {
+        assert(GetWindow() != nullptr);
         // Poll and handle events (inputs, window resize, etc.)
         glfwPollEvents();
     }
 
     void UpdateWindowContext() noexcept {
-        glfwMakeContextCurrent(window_manager_.GetWindow());
-        glfwSwapBuffers(window_manager_.GetWindow());
+        auto window = GetWindow();
+        assert(window != nullptr);
+        glfwMakeContextCurrent(window);
+        glfwSwapBuffers(window);
     }
 
     void ClearWindow() noexcept {
@@ -44,6 +52,10 @@ public:
     }
 
 private:
+    static constexpr int kDefaultWindowWidth         = 1280;
+    static constexpr int kDefaultWindowHeight        = 720;
+    static constexpr const char* kDefaultWindowTitle = "visualization app";
+
     class GLFWInitializer final {
     public:
         GLFWInitializer();

@@ -1,10 +1,9 @@
-#include "App.hpp"
-#include "React.hpp"
+#include "App/App.hpp"
+#include "App/React.hpp"
 
 int main() {
     try {
-        AppSpace::App app;
-        app.Run();
+        AppSpace::App().Run();
     } catch (...) {
         AppSpace::Except::React();
     }

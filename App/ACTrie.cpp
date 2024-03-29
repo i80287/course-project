@@ -10,7 +10,9 @@
 
 namespace AppSpace::ACTrieDS {
 
-ACTrie::ACTrie() {
+ACTrie::ACTrie()
+    : pattern_in_port_([this](Pattern pattern) { AddPattern(pattern); }),
+      text_in_port_([this](Text text) { FindAllSubstringsInText(text); }) {
     nodes_.reserve(kDefaultNodesCapacity);
     nodes_.resize(kDefaultNodesCount);
 }
@@ -23,15 +25,16 @@ ACTrie& ACTrie::ResetACTrie() {
 }
 
 void ACTrie::ComputeLinksForNode(ACTNode& node,
-                                 std::queue<vertex_index_t>& bfs_queue) {
+                                 std::queue<VertexIndex>& bfs_queue) {
     for (std::size_t child_node_index = 0; child_node_index < kAlphabetLength;
          child_node_index++) {
-        vertex_index_t child_link_v_index =
+        // vertex_suffix_link_node = to((link(v), sigma))
+        VertexIndex child_link_v_index =
             nodes_[node.suffix_link][child_node_index];
         assert(child_link_v_index != kNullNodeIndex);
 
         // child_index = to(v, sigma)
-        vertex_index_t child_index = node[child_node_index];
+        VertexIndex child_index = node[child_node_index];
 
         // to((v, sigma)) = to((v, sigma)) if (v, sigma) in the rng(to)
         // else to((link(v), sigma)) rng(to) is a range of function
@@ -59,9 +62,9 @@ void ACTrie::ComputeLinksForNode(ACTNode& node,
     }
 }
 
-void ACTrie::ComputeLinksForNodes() {
+ACTrie& ACTrie::ComputeLinksForNodes() {
     if (IsReady()) {
-        return;
+        return *this;
     }
 
     /*
@@ -113,16 +116,16 @@ void ACTrie::ComputeLinksForNodes() {
 
     nodes_[kFakePreRootIndex].edges.fill(kRootIndex);
 
-    std::queue<vertex_index_t> bfs_queue;
+    std::queue<VertexIndex> bfs_queue;
     bfs_queue.push(kRootIndex);
     do {
-        // In the comments this node is called 'v'
-        vertex_index_t vertex_index = bfs_queue.front();
+        VertexIndex vertex_index = bfs_queue.front();
         bfs_queue.pop();
-        // vertex_suffix_link_node = to((link(v), sigma))
         ComputeLinksForNode(nodes_[vertex_index], bfs_queue);
     } while (!bfs_queue.empty());
-    assert(IsACTrieInCorrectnessState());
+    assert(IsACTrieInCorrectState());
+    is_ready_ = true;
+    return *this;
 }
 
 ACTrie& ACTrie::AddPattern(std::string_view pattern) {
@@ -138,13 +141,12 @@ ACTrie& ACTrie::AddPattern(std::string_view pattern) {
         }
     }
 
-    vertex_index_t current_node_index = kRootIndex;
-    auto pattern_iter                 = pattern.begin();
-    auto pattern_end                  = pattern.end();
+    VertexIndex current_node_index = kRootIndex;
+    auto pattern_iter              = pattern.begin();
+    auto pattern_end               = pattern.end();
     for (; pattern_iter != pattern_end; ++pattern_iter) {
-        vertex_index_t symbol_index = SymbolToIndex(*pattern_iter);
-        vertex_index_t next_node_index =
-            nodes_[current_node_index][symbol_index];
+        VertexIndex symbol_index    = SymbolToIndex(*pattern_iter);
+        VertexIndex next_node_index = nodes_[current_node_index][symbol_index];
         if (next_node_index != kNullNodeIndex) {
             current_node_index = next_node_index;
         } else {
@@ -155,17 +157,16 @@ ACTrie& ACTrie::AddPattern(std::string_view pattern) {
     size_t lasted_max_length = size_t(pattern_end - pattern_iter);
     nodes_.reserve(nodes_.size() + lasted_max_length);
 
-    for (vertex_index_t new_node_index = vertex_index_t(nodes_.size());
+    for (VertexIndex new_node_index = VertexIndex(nodes_.size());
          pattern_iter != pattern_end; ++pattern_iter) {
-        vertex_index_t symbol_index = SymbolToIndex(*pattern_iter);
+        VertexIndex symbol_index = SymbolToIndex(*pattern_iter);
         nodes_.emplace_back();
         nodes_[current_node_index][symbol_index] = new_node_index;
         current_node_index                       = new_node_index++;
     }
 
-    nodes_[current_node_index].word_index =
-        word_length_t(words_lengths_.size());
-    words_lengths_.push_back(word_length_t(pattern.size()));
+    nodes_[current_node_index].word_index = WordLength(words_lengths_.size());
+    words_lengths_.push_back(WordLength(pattern.size()));
     return *this;
 }
 
@@ -174,10 +175,10 @@ ACTrie& ACTrie::FindAllSubstringsInText(std::string_view text) {
         ComputeLinksForNodes();
     }
 
-    vertex_index_t current_node_index = kRootIndex;
+    VertexIndex current_node_index = kRootIndex;
     for (std::size_t i = 0; i < text.size(); i++) {
-        const char symbol           = text[i];
-        vertex_index_t symbol_index = SymbolToIndex(symbol);
+        const char symbol        = text[i];
+        VertexIndex symbol_index = SymbolToIndex(symbol);
         if (symbol_index >= kAlphabetLength) {
             current_node_index = kRootIndex;
             continue;
@@ -190,7 +191,7 @@ ACTrie& ACTrie::FindAllSubstringsInText(std::string_view text) {
             assert(word_index < words_lengths_.size());
             auto word_length         = words_lengths_[word_index];
             auto word_start_position = i + 1 - word_length;
-            found_substrings_port_.SetDataAndNotify(FoundSubstringSendData{
+            found_substrings_port_.SetDataAndNotify(FoundSubstringInfo{
                 .nodes         = nodes_,
                 .words_lengths = words_lengths_,
                 .status        = DataStatus::kFoundNewSubstring,
@@ -201,7 +202,7 @@ ACTrie& ACTrie::FindAllSubstringsInText(std::string_view text) {
         }
 
         // Jump up through compressed suffix links
-        for (vertex_index_t terminal_node_index =
+        for (VertexIndex terminal_node_index =
                  nodes_[current_node_index].compressed_suffix_link;
              terminal_node_index != kRootIndex;
              terminal_node_index =
@@ -212,7 +213,7 @@ ACTrie& ACTrie::FindAllSubstringsInText(std::string_view text) {
             assert(word_index < words_lengths_.size());
             auto word_length         = words_lengths_[word_index];
             auto word_start_position = i + 1 - word_length;
-            found_substrings_port_.SetDataAndNotify(FoundSubstringSendData{
+            found_substrings_port_.SetDataAndNotify(FoundSubstringInfo{
                 .nodes         = nodes_,
                 .words_lengths = words_lengths_,
                 .status        = DataStatus::kFoundNewSubstring,
@@ -226,7 +227,7 @@ ACTrie& ACTrie::FindAllSubstringsInText(std::string_view text) {
     return *this;
 }
 
-bool ACTrie::IsACTrieInCorrectnessState() const {
+bool ACTrie::IsACTrieInCorrectState() const {
     if (nodes_.size() < kDefaultNodesCount)
         return false;
     auto iter = nodes_.begin();
@@ -235,7 +236,7 @@ bool ACTrie::IsACTrieInCorrectnessState() const {
     ++iter;
     if (iter != nodes_.begin() + kFakePreRootIndex)
         return false;
-    for (vertex_index_t child_index : iter->edges) {
+    for (VertexIndex child_index : iter->edges) {
         if (child_index != kRootIndex)
             return false;
     }
@@ -243,11 +244,11 @@ bool ACTrie::IsACTrieInCorrectnessState() const {
     ++iter;
     if (iter != nodes_.begin() + kRootIndex)
         return false;
-    auto is_index_correct = [&](vertex_index_t index) constexpr noexcept {
+    auto is_index_correct = [&](VertexIndex index) constexpr noexcept {
         return index >= kFakePreRootIndex && index < nodes_.size();
     };
     for (auto iter_end = nodes_.end(); iter != iter_end; ++iter) {
-        for (vertex_index_t child_index : iter->edges) {
+        for (VertexIndex child_index : iter->edges) {
             if (!is_index_correct(child_index))
                 return false;
         }
@@ -262,12 +263,12 @@ bool ACTrie::IsACTrieInCorrectnessState() const {
     return true;
 }
 
-ACTrie& ACTrie::Subscribe(Observer<FoundSubstringSendData>* observer) {
+ACTrie& ACTrie::AddSubscriber(Observer<FoundSubstringInfo>* observer) {
     found_substrings_port_.Subscribe(observer);
     return *this;
 }
 
-ACTrie& ACTrie::Subscribe(Observer<BadInputSendData>* observer) {
+ACTrie& ACTrie::AddSubscriber(Observer<BadInputPatternInfo>* observer) {
     bad_input_port_.Subscribe(observer);
     return *this;
 }

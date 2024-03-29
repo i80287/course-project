@@ -1,3 +1,5 @@
+#pragma once
+
 namespace AppSpace::Except {
 
 void React() noexcept;

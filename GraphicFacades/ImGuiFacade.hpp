@@ -11,16 +11,14 @@ namespace AppSpace::GraphicFacades {
 class ImGuiFacade final {
 public:
     ImGuiFacade();
-    ImGuiFacade(const ImGuiFacade&)            = delete;
-    ImGuiFacade(ImGuiFacade&&)                 = delete;
-    ImGuiFacade& operator=(const ImGuiFacade&) = delete;
-    ImGuiFacade& operator=(ImGuiFacade&&)      = delete;
 
-    bool ShouldClose() noexcept {
-        return static_cast<bool>(
-            glfwWindowShouldClose(glfw_facade_.GetWindow()));
+    void StartRuntimeLoop(auto new_frame_code) {
+        while (!glfw_facade_.ShouldClose()) {
+            RenderRuntimeLoopIteration(new_frame_code);
+        }
     }
 
+private:
     void RenderRuntimeLoopIteration(auto new_frame_code) {
         glfw_facade_.PollEvents();
         imgui_binder_.NewFrame();
@@ -34,7 +32,6 @@ public:
         glfw_facade_.UpdateWindowContext();
     }
 
-private:
     class ImGuiContextManager {
     public:
         ImGuiContextManager();

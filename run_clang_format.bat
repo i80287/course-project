@@ -1,1 +1,1 @@
-clang-format -i *.cpp -style=file:.\.clang-format -fallback-style=Google
+clang-format -i .\*.cpp .\App\*.cpp .\GraphicFacades\*.cpp -style=file:.\.clang-format -fallback-style=Google
