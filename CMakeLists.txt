@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.5)
 
 project(vis_actrie_app VERSION 0.1.0 LANGUAGES C CXX)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 set(EXTERNAL_DEPENDENCIES_DIR "${PROJECT_SOURCE_DIR}/external")
 
 set(GLAD_DIR "${EXTERNAL_DEPENDENCIES_DIR}/glad")
@@ -23,7 +26,6 @@ set(HEADER_FILES
     "${PROJECT_SOURCE_DIR}/App.hpp"
     "${PROJECT_SOURCE_DIR}/Drawer.hpp"
     "${PROJECT_SOURCE_DIR}/glad_fix.hpp"
-    "${PROJECT_SOURCE_DIR}/app_config.hpp"
     "${PROJECT_SOURCE_DIR}/SendTypeHelper.hpp")
 
 add_library(glad "${GLAD_DIR}/src/glad.c" "${GLAD_INCLUDE_DIR}/glad/glad.h")
@@ -57,8 +59,6 @@ include_directories(${PROJECT_SOURCE_DIR}
 
 target_link_libraries(vis_actrie_app glad glfw)
 
-set_property(TARGET vis_actrie_app PROPERTY CXX_STANDARD 20)
-
 message(STATUS "CMAKE_C_FLAGS: ${CMAKE_C_FLAGS}")
 message(STATUS "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
 
@@ -66,7 +66,9 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
 
     elseif (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
-        
+
+    elseif (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "AppleClang")
+
     endif()
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_compile_options(vis_actrie_app PRIVATE 
