@@ -2,75 +2,137 @@
 
 #include <cassert>
 #include <functional>
-#include <utility>
+#include <list>
+#include <optional>
 
 #include "SendTypeHelper.hpp"
 
 namespace AppSpace {
 
-template <class SubscribeData, class SendData>
+template <class TData, class SendTDataBy = SendTypeHelper<TData>>
 class Observable;
 
-template <class SubscribeData, class SendData>
+template <class TData>
 class Observer {
-    friend class Observable<SubscribeData, SendData>;
-    using ObservableType = Observable<SubscribeData, SendData>;
+    friend class Observable<TData>;
+    using Observable = Observable<TData>;    
 
 public:
-    using SubscribeDataType = SendTypeHelper<SubscribeData>;
-    using SubscribeCallSignature = void(SubscribeDataType);
-
-    using NotifyDataType = SendTypeHelper<SubscribeData>;
-    using NotifyCallSignature = void(NotifyDataType);
-
-    using UnsubscribeDataType = NotifyDataType;
-    using UnsubscribeCallSignature = NotifyCallSignature;
+    using SendTDataBy   = SendTypeHelper<TData>;
+    using CallSignature = void(SendTDataBy);
 
     template <class TOnSubscribe, class TOnNotify, class TOnUnsbscribe>
-    Observer(TOnSubscribe&& on_subscribe, TOnNotify on_notify,
+    Observer(TOnSubscribe&& on_subscribe, TOnNotify&& on_notify,
              TOnUnsbscribe&& on_unsubscribe) noexcept
-        : on_subscribe_(std::move(on_subscribe)),
-          on_notify_(std::move(on_notify)),
-          on_unsubscribe_(std::move(on_unsubscribe)) {}
+        : on_subscribe_(std::forward<TOnSubscribe>(on_subscribe)),
+          on_notify_(std::forward<TOnNotify>(on_notify)),
+          on_unsubscribe_(std::forward<TOnUnsbscribe>(on_unsubscribe)) {}
 
-    void OnSubscribe(SubscribeDataType data);
-
-    void OnNotify(NotifyDataType data);
-
-    void OnUnsubscribe(UnsubscribeDataType data);
+    Observer(const Observer&)            = delete;
+    Observer& operator=(const Observer&) = delete;
+    Observer(Observer&&)                 = delete;
+    Observer& operator=(Observer&&)      = delete;
 
     void Unsubscribe();
 
-private:
-    void SetObservable(ObservableType* observable) noexcept;
+    ~Observer() {
+        Unsubscribe();
+    }
 
-    ObservableType* observable_ = nullptr;
-    std::function<SubscribeCallSignature> on_subscribe_;
-    std::function<NotifyCallSignature> on_notify_;
-    std::function<UnsubscribeCallSignature> on_unsubscribe_;
+private:
+    constexpr bool Subscribed() noexcept {
+        return observable_ != nullptr;
+    }
+
+    void SetObservable(Observable* observable) noexcept {
+        assert(observable);
+        observable_ = observable;
+    }
+
+    Observable* observable_ = nullptr;
+    std::function<void(SendTDataBy)> on_subscribe_;
+    std::function<void(SendTDataBy)> on_notify_;
+    std::function<void(SendTDataBy)> on_unsubscribe_;
 };
 
-template <class SubscribeData, class SendData>
-void Observer<SubscribeData, SendData>::OnSubscribe(SubscribeDataType data) {
-    on_subscribe_(data);
-}
+template <class TData, class SendTDataBy>
+class Observable {
+    friend class Observer<TData>;
+public:
+    using Observer    = Observer<TData>;
 
-template <class SubscribeData, class SendData>
-void Observer<SubscribeData, SendData>::OnNotify(NotifyDataType data) {
-    on_notify_(data);
-}
+    constexpr Observable() noexcept(std::is_nothrow_constructible_v<decltype(data_)> && std::is_nothrow_constructible_v<decltype(listeners_)>) = default;
 
-template <class SubscribeData, class SendData>
-void Observer<SubscribeData, SendData>::OnUnsubscribe(
-    UnsubscribeDataType data) {
-    on_unsubscribe_(data);
-}
+    template <class UniTData = TData>
+    explicit Observable(UniTData&& data) noexcept(
+        std::is_nothrow_constructible_v<TData, UniTData>)
+        : data_(std::forward<UniTData>(data)) {}
 
-template <class SubscribeData, class SendData>
-void Observer<SubscribeData, SendData>::SetObservable(
-    ObservableType* observable) noexcept {
-    assert(observable);
-    observable_ = observable;
+    Observable(const Observable&)            = delete;
+    Observable& operator=(const Observable&) = delete;
+    Observable(Observable&&)                 = delete;
+    Observable& operator=(Observable&&)      = delete;
+
+    void Subscribe(Observer* observer) {
+        assert(observer);
+        if (observer->Subscribed()) {
+            observer->Unsubscribe();
+        }
+        listeners_.push_back(observer);
+        observer->SetObservable(this);
+        if (data_.has_value())
+            observer->on_subscribe_(*data_);
+    }
+
+    void UnsubscribeAll() {
+        for (size_t iter = 0, max_iters = listeners_.size();
+             !listeners_.empty() && iter < max_iters; iter++) {
+            listeners_.front()->Unsubscribe();
+        }
+        assert(listeners_.empty());
+    }
+
+    void ResetData() noexcept {
+        data_.reset();
+    }
+
+    template <class UniTData = TData>
+    void SetDataAndNotify(UniTData&& data) {
+        data_ = std::forward<UniTData>(data);
+        Notify();
+    }
+
+    void Notify() const {
+        if (!data_.has_value()) {
+            return;
+        }
+        SendTDataBy data = *data_;
+        for (Observer* observer : listeners_) {
+            assert(observer);
+            observer->on_notify_(data);
+        }
+    }
+
+private:
+    void Detach_(Observer* observer) {
+        assert(observer);
+        if (data_.has_value())
+            observer->on_unsubscribe_(*data_);
+        listeners_.remove(observer);
+    }
+
+    std::optional<TData> data_;
+    std::list<Observer*> listeners_;
+};
+
+template <class TData>
+void Observer<TData>::Unsubscribe() {
+    if (!Subscribed()) {
+        return;
+    }
+
+    observable_->Detach_(this);
+    observable_ = nullptr;
 }
 
 }  // namespace AppSpace

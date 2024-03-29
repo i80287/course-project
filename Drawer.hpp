@@ -8,44 +8,33 @@
 #include <vector>
 
 #include "ACTrie.hpp"
+#include "GLFWwindowManager.hpp"
 #include "Observer.hpp"
-#include "app_config.hpp"
-#include "glad_fix.hpp"
 
 namespace AppSpace {
 
 class Drawer {
 public:
-    using ModelType =
-        ACTrieDS::ACTrie<kMinTrieChar, kMaxTrieChar, kIsCaseInsensetive>;
-    using ObserverType =
-        Observer<ModelType::SubscribeData, ModelType::SendData>;
-    using SubscribeDataType = ObserverType::SubscribeDataType;
-    using NotifyDataType = ObserverType::NotifyDataType;
-    using UnsubscribeDataType = ObserverType::UnsubscribeDataType;
+    using FoundSubstringData = ACTrieDS::ACTrie::FoundSubstringSendData;
+    using BadInputStringData = ACTrieDS::ACTrie::BadInputSendData;
+    using FoundSubstringObserver = Observer<FoundSubstringData>;
+    using BadInputObserver = Observer<BadInputStringData>;
 
     Drawer();
     ~Drawer();
 
     [[nodiscard]] bool ShouldClose() const noexcept;
     void Render();
-    ObserverType* GetObserverPort() noexcept;
+    FoundSubstringObserver* GetFoundStringsObserverPort() noexcept;
+    BadInputObserver* GetBadInputObserverPort() noexcept;
 
 private:
     void UpdateState();
-    void OnError(std::string_view msg) noexcept;
 
-    // std::unique_ptr can't be used here
-    // because GLFWwindow is an incomplete type
-    GLFWwindow* window_ = nullptr;
-    ObserverType port_;
-
-    // Pointer to the nodes of the DS
-    std::vector<ModelType::ACTNode>* actrie_nodes_ = nullptr;
-    std::vector<ModelType::word_length_t>* actrie_words_lengths_ = nullptr;
-
+    GLFWwindowManager window_;
+    FoundSubstringObserver found_strings_port_;
+    BadInputObserver bad_input_port_;
     bool suppressor_ = false;
-    bool init_failed_ = false;
 };
 
 }  // namespace AppSpace

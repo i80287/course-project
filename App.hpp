@@ -2,13 +2,11 @@
 
 #include "ACTrie.hpp"
 #include "Drawer.hpp"
-#include "app_config.hpp"
 
 namespace AppSpace {
 
 class App {
-    using ModelType =
-        ACTrieDS::ACTrie<kMinTrieChar, kMaxTrieChar, kIsCaseInsensetive>;
+    using ModelType = ACTrieDS::ACTrie;
 
 public:
     App();

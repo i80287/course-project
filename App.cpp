@@ -2,7 +2,10 @@
 
 namespace AppSpace {
 
-App::App() { model_.Subscribe(view_.GetObserverPort()); }
+App::App() {
+    model_.Subscribe(view_.GetFoundStringsObserverPort());
+    model_.Subscribe(view_.GetBadInputObserverPort());
+}
 
 void App::Run() {
     // Main loop

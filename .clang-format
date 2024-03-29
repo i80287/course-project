@@ -9,3 +9,6 @@ AllowShortIfStatementsOnASingleLine: Never
 SortIncludes: CaseInsensitive
 BraceWrapping:
     BeforeElse: true
+AlignConsecutiveAssignments: true
+InsertNewlineAtEOF: true
+AllowShortFunctionsOnASingleLine: Empty
