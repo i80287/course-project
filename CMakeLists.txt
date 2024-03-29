@@ -18,7 +18,7 @@ set(IMGUI_INCLUDE_DIR "${IMGUI_DIR}")
 set(IMGUI_BACKENDS_INCLUDE_DIR "${IMGUI_DIR}/backends")
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS ON)
+set(GLFW_BUILD_TESTS OFF)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
 set(HEADER_FILES
@@ -39,7 +39,6 @@ add_executable(vis_actrie_app
     App.cpp
     ACTrie.cpp
     Drawer.cpp
-    Observable.cpp
     "${IMGUI_DIR}/imgui.cpp"
     "${IMGUI_DIR}/imgui_demo.cpp"
     "${IMGUI_DIR}/imgui_draw.cpp"
