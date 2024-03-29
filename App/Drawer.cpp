@@ -11,20 +11,21 @@
 namespace AppSpace {
 
 Drawer::Drawer()
-    : found_strings_port_(
-          [this](FoundSubstringObserver::SendTDataBy substring_info) {
-              // TODO:
-          }),
-      bad_input_port_(
-          [this](BadInputObserver::SendTDataBy bad_input_info) {
-              // TODO:
-          }) {
+    : found_strings_port_([this](FoundSubstringSentBy substring_info) {
+          OnFoundSubstring(substring_info);
+      }),
+      bad_input_port_([this](BadInputSentBy bad_input_info) {
+          OnBadPatternInput(bad_input_info);
+      }) {
     // Setup ImGui style
+    SetupImGuiStyle();
+}
+
+void Drawer::SetupImGuiStyle() {
     ImGui::StyleColorsDark();
 }
 
-Drawer::FoundSubstringObserver*
-Drawer::GetFoundStringsObserverPort() noexcept {
+Drawer::FoundSubstringObserver* Drawer::GetFoundStringsObserverPort() noexcept {
     return &found_strings_port_;
 }
 
@@ -85,8 +86,7 @@ void Drawer::Draw() {
 
     ImVec2 circle_center = ImVecMiddle(canvas_pos, canvas_end_pos);
     // TODO: replace magic numbers with constants
-    draw_list->AddCircle(circle_center, 36, IM_COL32(120, 80, 40, 255), 0,
-                         3);
+    draw_list->AddCircle(circle_center, 36, IM_COL32(120, 80, 40, 255), 0, 3);
     // std::string word_index_str = std::to_string(root_node.IsTerminal() ?
     // root_node.word_index : 0); draw_list->AddText(circle_center,
     // kRedColor, word_index_str.data(),
@@ -94,5 +94,9 @@ void Drawer::Draw() {
 
     ImGui::End();
 }
+
+void Drawer::OnFoundSubstring(FoundSubstringSentBy substring_info) {}
+
+void Drawer::OnBadPatternInput(BadInputSentBy bad_input_info) {}
 
 }  // namespace AppSpace

@@ -1,5 +1,4 @@
-#ifndef GLAD_FIX_HPP
-#define GLAD_FIX_HPP
+#pragma once
 
 /**
  * It is a helper header file that prevents clang-format
@@ -19,5 +18,3 @@
  * Then we include glfw3.h after our OpenGL definitions
  */
 #include <GLFW/glfw3.h>
-
-#endif

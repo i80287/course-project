@@ -6,17 +6,18 @@
 namespace AppSpace {
 
 class Drawer final {
-    using FoundSubstringInfo  = ACTrieDS::ACTrie::FoundSubstringInfo;
-    using BadInputPatternInfo = ACTrieDS::ACTrie::BadInputPatternInfo;
-    using Pattern             = ACTrieDS::ACTrie::Pattern;
-    using Text                = ACTrieDS::ACTrie::Text;
-    using PatternObserver     = Observer<Pattern>;
-    using TextObserver        = Observer<Text>;
-
-public:
+    using FoundSubstringInfo     = ACTrieDS::ACTrie::FoundSubstringInfo;
+    using BadInputPatternInfo    = ACTrieDS::ACTrie::BadInputPatternInfo;
+    using Pattern                = ACTrieDS::ACTrie::Pattern;
+    using Text                   = ACTrieDS::ACTrie::Text;
+    using PatternObserver        = Observer<Pattern>;
+    using TextObserver           = Observer<Text>;
     using FoundSubstringObserver = Observer<FoundSubstringInfo>;
     using BadInputObserver       = Observer<BadInputPatternInfo>;
+    using FoundSubstringSentBy   = FoundSubstringObserver::SendTDataBy;
+    using BadInputSentBy         = BadInputObserver::SendTDataBy;
 
+public:
     Drawer();
     void Draw();
 
@@ -26,6 +27,10 @@ public:
     Drawer& AddTextSubscriber(TextObserver* observer);
 
 private:
+    void SetupImGuiStyle();
+    void OnFoundSubstring(FoundSubstringSentBy substring_info);
+    void OnBadPatternInput(BadInputSentBy bad_input_info);
+
     FoundSubstringObserver found_strings_port_;
     BadInputObserver bad_input_port_;
     Observable<Pattern> user_pattern_input_port_;

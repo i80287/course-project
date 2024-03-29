@@ -100,24 +100,19 @@ private:
     static constexpr VertexIndex kRootIndex        = kFakePreRootIndex + 1;
     static constexpr VertexIndex kDefaultNodesCount = kRootIndex + 1;
 
-    static VertexIndex SymbolToIndex(char symbol) noexcept {
-        std::int32_t symbol_as_int = static_cast<std::uint8_t>(symbol);
-        if constexpr (kIsCaseInsensetive) {
-            symbol_as_int = std::tolower(symbol_as_int);
-        }
-
-        return static_cast<VertexIndex>(symbol_as_int) - kAlphabetStart;
-    }
-
-    constexpr bool IsReady() const noexcept {
-        return is_ready_;
-    }
-
-    ACTrie& ComputeLinksForNodes();
-
-    void ComputeLinksForNode(ACTNode&, std::queue<VertexIndex>&);
-
+    void NotifyAboutFoundSubstring(VertexIndex current_node_index,
+                                   std::size_t position_in_text,
+                                   std::string_view text);
+    void JumpThroughCompressedSuffixLinks(VertexIndex current_node_index,
+                                          std::size_t position_in_text,
+                                          std::string_view text);
+    constexpr bool IsReady() const noexcept;
+    static VertexIndex SymbolToIndex(char symbol) noexcept;
+    static void ComputeLinksForNodes(std::vector<ACTNode>&);
+    static void ComputeLinksForNode(ACTNode&, std::vector<ACTNode>&,
+                                    std::queue<VertexIndex>&);
     bool IsACTrieInCorrectState() const;
+    bool IsFakePrerootInCorrectState() const;
 
     std::vector<ACTNode> nodes_;
     std::vector<WordLength> words_lengths_;
@@ -127,5 +122,18 @@ private:
     Observer<Pattern> pattern_in_port_;
     Observer<Text> text_in_port_;
 };
+
+constexpr bool ACTrie::IsReady() const noexcept {
+    return is_ready_;
+}
+
+ACTrie::VertexIndex ACTrie::SymbolToIndex(char symbol) noexcept {
+    std::int32_t symbol_as_int = static_cast<std::uint8_t>(symbol);
+    if constexpr (kIsCaseInsensetive) {
+        symbol_as_int = std::tolower(symbol_as_int);
+    }
+
+    return static_cast<VertexIndex>(symbol_as_int) - kAlphabetStart;
+}
 
 }  // namespace AppSpace::ACTrieDS

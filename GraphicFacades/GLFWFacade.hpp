@@ -12,44 +12,11 @@ public:
                int window_height        = kDefaultWindowHeight,
                const char* window_title = kDefaultWindowTitle);
 
-    constexpr GLFWwindow* GetWindow() noexcept {
-        return window_manager_.GetWindow();
-    }
-
-    bool ShouldClose() noexcept {
-        auto window = GetWindow();
-        assert(window != nullptr);
-        return static_cast<bool>(glfwWindowShouldClose(window));
-    }
-
-    void PollEvents() noexcept {
-        assert(GetWindow() != nullptr);
-        // Poll and handle events (inputs, window resize, etc.)
-        glfwPollEvents();
-    }
-
-    void UpdateWindowContext() noexcept {
-        auto window = GetWindow();
-        assert(window != nullptr);
-        glfwMakeContextCurrent(window);
-        glfwSwapBuffers(window);
-    }
-
-    void ClearWindow() noexcept {
-        int display_w = 0;
-        int display_h = 0;
-        glfwGetFramebufferSize(window_manager_.GetWindow(), &display_w,
-                               &display_h);
-        glViewport(0, 0, display_w, display_h);
-
-        constexpr float kScreenClearColorRed   = 0.45f;
-        constexpr float kScreenClearColorGreen = 0.55f;
-        constexpr float kScreenClearColorBlue  = 0.60f;
-        constexpr float kScreenClearColorAlpha = 1.00f;
-        glClearColor(kScreenClearColorRed, kScreenClearColorGreen,
-                     kScreenClearColorBlue, kScreenClearColorAlpha);
-        glClear(GL_COLOR_BUFFER_BIT);
-    }
+    constexpr GLFWwindow* GetWindow() const noexcept;
+    bool ShouldClose() const noexcept;
+    void PollEvents() const noexcept;
+    void UpdateWindowContext() noexcept;
+    void ClearWindow() const noexcept;
 
 private:
     static constexpr int kDefaultWindowWidth         = 1280;
@@ -79,7 +46,7 @@ private:
         WindowManager& operator=(const WindowManager&) = delete;
         WindowManager& operator=(WindowManager&&)      = delete;
 
-        constexpr GLFWwindow* GetWindow() noexcept {
+        constexpr GLFWwindow* GetWindow() const noexcept {
             return window_;
         }
 
@@ -92,5 +59,43 @@ private:
     GLFWInitializer initializer_;
     WindowManager window_manager_;
 };
+
+constexpr GLFWwindow* GLFWFacade::GetWindow() const noexcept {
+    return window_manager_.GetWindow();
+}
+
+bool GLFWFacade::ShouldClose() const noexcept {
+    auto window = GetWindow();
+    assert(window != nullptr);
+    return static_cast<bool>(glfwWindowShouldClose(window));
+}
+
+void GLFWFacade::PollEvents() const noexcept {
+    assert(GetWindow() != nullptr);
+    glfwPollEvents();
+}
+
+void GLFWFacade::UpdateWindowContext() noexcept {
+    auto window = GetWindow();
+    assert(window != nullptr);
+    glfwMakeContextCurrent(window);
+    glfwSwapBuffers(window);
+}
+
+void GLFWFacade::ClearWindow() const noexcept {
+    int display_w = 0;
+    int display_h = 0;
+    glfwGetFramebufferSize(window_manager_.GetWindow(), &display_w,
+                           &display_h);
+    glViewport(0, 0, display_w, display_h);
+
+    constexpr float kScreenClearColorRed   = 0.45f;
+    constexpr float kScreenClearColorGreen = 0.55f;
+    constexpr float kScreenClearColorBlue  = 0.60f;
+    constexpr float kScreenClearColorAlpha = 1.00f;
+    glClearColor(kScreenClearColorRed, kScreenClearColorGreen,
+                 kScreenClearColorBlue, kScreenClearColorAlpha);
+    glClear(GL_COLOR_BUFFER_BIT);
+}
 
 }  // namespace AppSpace::GraphicFacades
