@@ -2,6 +2,7 @@
 
 #include "ACTrie.hpp"
 #include "Drawer.hpp"
+#include "GraphicFacades/ImGuiFacade.hpp"
 
 namespace AppSpace {
 
@@ -12,6 +13,7 @@ public:
     App();
     void Run();
 private:
+    GraphicFacades::ImGuiFacade imgui_facade_;
     Drawer view_;
     ModelType model_;
 };

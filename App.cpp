@@ -1,5 +1,7 @@
 #include "App.hpp"
 
+#include <ctime>
+
 namespace AppSpace {
 
 App::App() {
@@ -8,9 +10,10 @@ App::App() {
 }
 
 void App::Run() {
-    // Main loop
-    while (!view_.ShouldClose()) {
-        view_.Render();
+    while (!imgui_facade_.ShouldClose()) {
+        imgui_facade_.RenderRuntimeLoopIteration([this]() {
+            view_.Draw();
+        });
     }
 }
 

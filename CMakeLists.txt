@@ -25,7 +25,6 @@ add_library(glad "${GLAD_DIR}/src/glad.c")
 target_include_directories(glad PUBLIC include/)
 
 add_subdirectory(external/glfw)
-# add_library(glfw STATIC IMPORTED)
 
 add_executable(vis_actrie_app
     main.cpp
@@ -33,6 +32,8 @@ add_executable(vis_actrie_app
     ACTrie.cpp
     Drawer.cpp
     React.cpp
+    GraphicFacades/GLFWFacade.cpp
+    GraphicFacades/ImGuiFacade.cpp
     "${IMGUI_DIR}/imgui.cpp"
     "${IMGUI_DIR}/imgui_demo.cpp"
     "${IMGUI_DIR}/imgui_draw.cpp"

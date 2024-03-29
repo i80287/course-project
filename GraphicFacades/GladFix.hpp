@@ -1,5 +1,5 @@
-#ifndef glad_fix
-#define glad_fix
+#ifndef GLAD_FIX_HPP
+#define GLAD_FIX_HPP
 
 /**
  * It is a helper header file that prevents clang-format

@@ -64,8 +64,7 @@ public:
 
     struct FoundSubstringSendData {
         std::reference_wrapper<const std::vector<ACTNode>> nodes;
-        std::reference_wrapper<const std::vector<word_length_t>>
-            words_lengths;
+        std::reference_wrapper<const std::vector<word_length_t>> words_lengths;
         DataStatus status{};
         std::string_view found_substring{};
         std::size_t substring_start_index{};
@@ -73,8 +72,8 @@ public:
     };
 
     struct BadInputSendData {
-        std::size_t symbol_index;
-        char bad_symbol;
+        std::size_t symbol_index{};
+        char bad_symbol{};
     };
 
     ACTrie();
