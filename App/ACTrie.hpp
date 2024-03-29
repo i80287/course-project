@@ -26,7 +26,7 @@ public:
     static constexpr std::size_t kAlphabetLength =
         kAlphabetEnd - kAlphabetStart + 1;
 
-    struct ACTNode {
+    struct ACTNode final {
         static constexpr WordLength kMissingWord =
             std::numeric_limits<WordLength>::max();
 
@@ -45,18 +45,17 @@ public:
          */
         WordLength word_index = kMissingWord;
 
-        [[nodiscard]] VertexIndex operator[](
-            std::size_t index) const noexcept {
+        VertexIndex operator[](std::size_t index) const noexcept {
             assert(index < kAlphabetLength);
             return edges[index];
         }
 
-        [[nodiscard]] VertexIndex& operator[](std::size_t index) noexcept {
+        VertexIndex& operator[](std::size_t index) noexcept {
             assert(index < kAlphabetLength);
             return edges[index];
         }
 
-        [[nodiscard]] constexpr bool IsTerminal() const noexcept {
+        constexpr bool IsTerminal() const noexcept {
             return word_index != kMissingWord;
         }
     };
@@ -80,18 +79,12 @@ public:
 
     ACTrie();
     ACTrie& AddPattern(Pattern pattern);
-    bool ContainsPattern(Pattern pattern) const noexcept;
     ACTrie& FindAllSubstringsInText(Text text);
     ACTrie& ResetACTrie();
     ACTrie& AddSubscriber(Observer<FoundSubstringInfo>* observer);
     ACTrie& AddSubscriber(Observer<BadInputPatternInfo>* observer);
-
-    constexpr std::size_t NodesSize() const noexcept {
-        return nodes_.size();
-    }
-    constexpr std::size_t PatternsSize() const noexcept {
-        return words_lengths_.size();
-    }
+    constexpr std::size_t NodesSize() const noexcept;
+    constexpr std::size_t PatternsSize() const noexcept;
 
 private:
     static constexpr std::size_t kDefaultNodesCapacity = 16;
@@ -135,6 +128,14 @@ ACTrie::VertexIndex ACTrie::SymbolToIndex(char symbol) noexcept {
     }
 
     return static_cast<VertexIndex>(symbol_as_int) - kAlphabetStart;
+}
+
+constexpr std::size_t ACTrie::NodesSize() const noexcept {
+    return nodes_.size();
+}
+
+constexpr std::size_t ACTrie::PatternsSize() const noexcept {
+    return words_lengths_.size();
 }
 
 }  // namespace AppSpace::ACTrieDS

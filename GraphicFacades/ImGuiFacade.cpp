@@ -4,6 +4,9 @@
 
 namespace AppSpace::GraphicFacades {
 
+ImGuiFacade::ImGuiFacade()
+    : glfw_facade_{}, context_manager_{}, imgui_binder_(glfw_facade_) {}
+
 ImGuiFacade::ImGuiContextManager::ImGuiContextManager() {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -29,8 +32,5 @@ ImGuiFacade::ImGuiBinder::~ImGuiBinder() {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
 }
-
-ImGuiFacade::ImGuiFacade()
-    : glfw_facade_{}, context_manager_{}, imgui_binder_(glfw_facade_) {}
 
 }  // namespace AppSpace::GraphicFacades

@@ -11,6 +11,10 @@ namespace AppSpace::GraphicFacades {
 class ImGuiFacade final {
 public:
     ImGuiFacade();
+    ImGuiFacade(const ImGuiFacade&) = delete;
+    ImGuiFacade& operator=(const ImGuiFacade&) = delete;
+    ImGuiFacade(ImGuiFacade&&) = delete;
+    ImGuiFacade& operator=(ImGuiFacade&&) = delete;
 
     void StartRuntimeLoop(auto new_frame_code) {
         while (!glfw_facade_.ShouldClose()) {
@@ -36,21 +40,12 @@ private:
     public:
         ImGuiContextManager();
         ~ImGuiContextManager();
-        ImGuiContextManager(const ImGuiContextManager&) = delete;
-        ImGuiContextManager(ImGuiContextManager&&)      = delete;
-        ImGuiContextManager& operator=(const ImGuiContextManager&) =
-            delete;
-        ImGuiContextManager& operator=(ImGuiContextManager&&) = delete;
     };
 
     class ImGuiBinder final {
     public:
         ImGuiBinder(GLFWFacade& glfw_facade);
         ~ImGuiBinder();
-        ImGuiBinder(const ImGuiBinder&)            = delete;
-        ImGuiBinder(ImGuiBinder&&)                 = delete;
-        ImGuiBinder& operator=(const ImGuiBinder&) = delete;
-        ImGuiBinder& operator=(ImGuiBinder&&)      = delete;
 
         void NewFrame() {
             ImGui_ImplOpenGL3_NewFrame();

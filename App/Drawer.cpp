@@ -21,28 +21,6 @@ Drawer::Drawer()
     SetupImGuiStyle();
 }
 
-void Drawer::SetupImGuiStyle() {
-    ImGui::StyleColorsDark();
-}
-
-Drawer::FoundSubstringObserver* Drawer::GetFoundStringsObserverPort() noexcept {
-    return &found_strings_port_;
-}
-
-Drawer::BadInputObserver* Drawer::GetBadInputObserverPort() noexcept {
-    return &bad_input_port_;
-}
-
-Drawer& Drawer::AddPatternSubscriber(PatternObserver* observer) {
-    user_pattern_input_port_.Subscribe(observer);
-    return *this;
-}
-
-Drawer& Drawer::AddTextSubscriber(TextObserver* observer) {
-    user_text_input_port_.Subscribe(observer);
-    return *this;
-}
-
 void Drawer::Draw() {
     ImGui::Begin("wnd");
 
@@ -93,6 +71,28 @@ void Drawer::Draw() {
     //                    word_index_str.data() + word_index_str.size());
 
     ImGui::End();
+}
+
+Drawer::FoundSubstringObserver* Drawer::GetFoundStringsObserverPort() noexcept {
+    return &found_strings_port_;
+}
+
+Drawer::BadInputObserver* Drawer::GetBadInputObserverPort() noexcept {
+    return &bad_input_port_;
+}
+
+Drawer& Drawer::AddPatternSubscriber(PatternObserver* observer) {
+    user_pattern_input_port_.Subscribe(observer);
+    return *this;
+}
+
+Drawer& Drawer::AddTextSubscriber(TextObserver* observer) {
+    user_text_input_port_.Subscribe(observer);
+    return *this;
+}
+
+void Drawer::SetupImGuiStyle() {
+    ImGui::StyleColorsDark();
 }
 
 void Drawer::OnFoundSubstring(FoundSubstringSentBy substring_info) {}
