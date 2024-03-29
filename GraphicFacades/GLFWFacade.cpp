@@ -17,6 +17,39 @@ GLFWFacade::GLFWFacade(int window_width, int window_height,
     }
 }
 
+bool GLFWFacade::ShouldClose() const noexcept {
+    auto window = GetWindow();
+    assert(window != nullptr);
+    return static_cast<bool>(glfwWindowShouldClose(window));
+}
+
+void GLFWFacade::PollEvents() const noexcept {
+    assert(GetWindow() != nullptr);
+    glfwPollEvents();
+}
+
+void GLFWFacade::UpdateWindowContext() noexcept {
+    auto window = GetWindow();
+    assert(window != nullptr);
+    glfwMakeContextCurrent(window);
+    glfwSwapBuffers(window);
+}
+
+void GLFWFacade::ClearWindow() const noexcept {
+    int display_w = 0;
+    int display_h = 0;
+    glfwGetFramebufferSize(window_manager_.GetWindow(), &display_w, &display_h);
+    glViewport(0, 0, display_w, display_h);
+
+    constexpr float kScreenClearColorRed   = 0.45f;
+    constexpr float kScreenClearColorGreen = 0.55f;
+    constexpr float kScreenClearColorBlue  = 0.60f;
+    constexpr float kScreenClearColorAlpha = 1.00f;
+    glClearColor(kScreenClearColorRed, kScreenClearColorGreen,
+                 kScreenClearColorBlue, kScreenClearColorAlpha);
+    glClear(GL_COLOR_BUFFER_BIT);
+}
+
 void GLFWFacade::GLFWInitializer::GlfwErrorCallback(
     int error, const char* description) noexcept {
     // Here we use low level fprintf instead of std::cerr

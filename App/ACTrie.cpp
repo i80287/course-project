@@ -135,6 +135,15 @@ void ACTrie::JumpThroughCompressedSuffixLinks(VertexIndex current_node_index,
     }
 }
 
+ACTrie::VertexIndex ACTrie::SymbolToIndex(char symbol) noexcept {
+    std::int32_t symbol_as_int = static_cast<std::uint8_t>(symbol);
+    if constexpr (kIsCaseInsensetive) {
+        symbol_as_int = std::tolower(symbol_as_int);
+    }
+
+    return static_cast<VertexIndex>(symbol_as_int) - kAlphabetStart;
+}
+
 void ACTrie::ComputeLinksForNodes(std::vector<ACTNode>& nodes) {
     nodes[kRootIndex].suffix_link            = kFakePreRootIndex;
     nodes[kRootIndex].compressed_suffix_link = kRootIndex;

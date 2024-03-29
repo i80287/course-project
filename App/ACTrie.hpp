@@ -121,15 +121,6 @@ constexpr bool ACTrie::IsReady() const noexcept {
     return is_ready_;
 }
 
-ACTrie::VertexIndex ACTrie::SymbolToIndex(char symbol) noexcept {
-    std::int32_t symbol_as_int = static_cast<std::uint8_t>(symbol);
-    if constexpr (kIsCaseInsensetive) {
-        symbol_as_int = std::tolower(symbol_as_int);
-    }
-
-    return static_cast<VertexIndex>(symbol_as_int) - kAlphabetStart;
-}
-
 constexpr std::size_t ACTrie::NodesSize() const noexcept {
     return nodes_.size();
 }
