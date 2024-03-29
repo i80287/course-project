@@ -25,11 +25,11 @@ ACTrie& ACTrie::ResetACTrie() {
     return *this;
 }
 
-void ACTrie::ComputeLinksForNodeChildren(
-    ACTNode& node, std::vector<ACTNode>& nodes,
-    std::queue<VertexIndex>& bfs_queue) {
-    for (std::size_t child_node_index = 0;
-         child_node_index < kAlphabetLength; child_node_index++) {
+void ACTrie::ComputeLinksForNodeChildren(ACTNode& node,
+                                         std::vector<ACTNode>& nodes,
+                                         std::queue<VertexIndex>& bfs_queue) {
+    for (std::size_t child_node_index = 0; child_node_index < kAlphabetLength;
+         child_node_index++) {
         VertexIndex child_link_v_index =
             nodes[node.suffix_link][child_node_index];
         assert(child_link_v_index != kNullNodeIndex);
@@ -80,9 +80,8 @@ ACTrie& ACTrie::AddPattern(std::string_view pattern) {
     auto pattern_iter              = pattern.begin();
     auto pattern_end               = pattern.end();
     for (; pattern_iter != pattern_end; ++pattern_iter) {
-        VertexIndex symbol_index = SymbolToIndex(*pattern_iter);
-        VertexIndex next_node_index =
-            nodes_[current_node_index][symbol_index];
+        VertexIndex symbol_index    = SymbolToIndex(*pattern_iter);
+        VertexIndex next_node_index = nodes_[current_node_index][symbol_index];
         if (next_node_index != kNullNodeIndex) {
             current_node_index = next_node_index;
         } else {
@@ -101,8 +100,7 @@ ACTrie& ACTrie::AddPattern(std::string_view pattern) {
         current_node_index                       = new_node_index++;
     }
 
-    nodes_[current_node_index].word_index =
-        WordLength(words_lengths_.size());
+    nodes_[current_node_index].word_index = WordLength(words_lengths_.size());
     words_lengths_.push_back(WordLength(pattern.size()));
     return *this;
 }
@@ -143,17 +141,17 @@ void ACTrie::NotifyAboutFoundSubstring(VertexIndex current_node_index,
     auto word_start_position = position_in_text + 1 - word_length;
 
     found_substrings_port_.SetDataAndNotify(FoundSubstringInfo{
-        .nodes           = nodes_,
-        .words_lengths   = words_lengths_,
-        .status          = DataStatus::kFoundNewSubstring,
-        .found_substring = text.substr(word_start_position, word_length),
+        .nodes                = nodes_,
+        .words_lengths        = words_lengths_,
+        .status               = DataStatus::kFoundNewSubstring,
+        .found_substring      = text.substr(word_start_position, word_length),
         .current_vertex_index = current_node_index,
     });
 }
 
-void ACTrie::JumpThroughCompressedSuffixLinks(
-    VertexIndex current_node_index, std::size_t position_in_text,
-    std::string_view text) {
+void ACTrie::JumpThroughCompressedSuffixLinks(VertexIndex current_node_index,
+                                              std::size_t position_in_text,
+                                              std::string_view text) {
     for (VertexIndex terminal_node_index =
              nodes_[current_node_index].compressed_suffix_link;
          terminal_node_index != kRootIndex;
@@ -161,8 +159,7 @@ void ACTrie::JumpThroughCompressedSuffixLinks(
              nodes_[terminal_node_index].compressed_suffix_link) {
         assert(terminal_node_index != kNullNodeIndex);
         assert(nodes_[terminal_node_index].IsTerminal());
-        NotifyAboutFoundSubstring(terminal_node_index, position_in_text,
-                                  text);
+        NotifyAboutFoundSubstring(terminal_node_index, position_in_text, text);
     }
 }
 
@@ -189,8 +186,7 @@ bool ACTrie::IsACTrieInCorrectState() const {
         if (!is_index_correct(iter->compressed_suffix_link)) {
             return false;
         }
-        if (iter->IsTerminal() &&
-            iter->word_index >= words_lengths_.size()) {
+        if (iter->IsTerminal() && iter->word_index >= words_lengths_.size()) {
             return false;
         }
     }
@@ -200,9 +196,9 @@ bool ACTrie::IsACTrieInCorrectState() const {
 
 bool ACTrie::IsFakePrerootInCorrectState() const {
     const auto& edges = nodes_[kFakePreRootIndex].edges;
-    return std::all_of(
-        edges.begin(), edges.end(),
-        [](VertexIndex child_index) { return child_index == kRootIndex; });
+    return std::all_of(edges.begin(), edges.end(), [](VertexIndex child_index) {
+        return child_index == kRootIndex;
+    });
 }
 
 ACTrie& ACTrie::AddSubscriber(Observer<FoundSubstringInfo>* observer) {
