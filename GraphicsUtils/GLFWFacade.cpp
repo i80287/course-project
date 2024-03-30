@@ -15,6 +15,7 @@ GLFWFacade::GLFWFacade(int window_width, int window_height,
     if (!TryLoadGLFW()) {
         throw std::runtime_error("Failed to initialize OpenGL context");
     }
+    glfwMaximizeWindow(GetWindow());
 }
 
 bool GLFWFacade::ShouldClose() const noexcept {
@@ -39,14 +40,17 @@ void GLFWFacade::ClearWindow() const noexcept {
     int display_w = 0;
     int display_h = 0;
     glfwGetFramebufferSize(window_manager_.GetWindow(), &display_w, &display_h);
+    assert(glViewport);
     glViewport(0, 0, display_w, display_h);
 
     constexpr float kScreenClearColorRed   = 0.45f;
     constexpr float kScreenClearColorGreen = 0.55f;
     constexpr float kScreenClearColorBlue  = 0.60f;
     constexpr float kScreenClearColorAlpha = 1.00f;
+    assert(glClearColor);
     glClearColor(kScreenClearColorRed, kScreenClearColorGreen,
                  kScreenClearColorBlue, kScreenClearColorAlpha);
+    assert(glClear);
     glClear(GL_COLOR_BUFFER_BIT);
 }
 
@@ -86,10 +90,7 @@ bool GLFWFacade::TryLoadGLFW() const noexcept {
     // This type of loading should be used according
     //  to the documentation on
     //  https://www.khronos.org/opengl/wiki/OpenGL_Loading_Library
-    return gladLoadGLLoader(
-               reinterpret_cast<GLADloadproc>(glfwGetProcAddress)) &&
-           glViewport != nullptr && glClearColor != nullptr &&
-           glClear != nullptr;
+    return gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress));
 }
 
 }  // namespace AppSpace::GraphicsUtils

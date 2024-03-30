@@ -16,7 +16,7 @@ public:
 
 private:
     GraphicsUtils::ImGuiFacade imgui_facade_;
-    Drawer view_;
+    GraphicsUtils::Drawer view_;
     ModelType model_;
     Controller::ACTrieController model_controller_;
 };

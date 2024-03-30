@@ -8,10 +8,7 @@ namespace AppSpace::GraphicsUtils {
 
 class GLFWFacade final {
 public:
-    GLFWFacade(int window_width         = kDefaultWindowWidth,
-               int window_height        = kDefaultWindowHeight,
-               const char* window_title = kDefaultWindowTitle);
-
+    GLFWFacade(int window_width, int window_height, const char* window_title);
     constexpr GLFWwindow* GetWindow() const noexcept;
     bool ShouldClose() const noexcept;
     void PollEvents() const noexcept;
@@ -19,10 +16,6 @@ public:
     void ClearWindow() const noexcept;
 
 private:
-    static constexpr int kDefaultWindowWidth         = 1280;
-    static constexpr int kDefaultWindowHeight        = 720;
-    static constexpr const char* kDefaultWindowTitle = "visualization app";
-
     class GLFWInitializer final {
     public:
         GLFWInitializer();

@@ -4,22 +4,27 @@
 
 namespace AppSpace::GraphicsUtils {
 
-ImGuiFacade::ImGuiFacade()
-    : glfw_facade_{}, context_manager_{}, imgui_binder_(glfw_facade_) {}
+ImGuiFacade::ImGuiFacade(int window_width, int window_height,
+                         const char* window_title)
+    : glfw_facade_(window_width, window_height, window_title),
+      context_manager_(),
+      imgui_binder_(glfw_facade_) {}
 
 ImGuiFacade::ImGuiContextManager::ImGuiContextManager() {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    // Enable Keyboard Controls
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    EnableKeyboardControls();
 }
 
 ImGuiFacade::ImGuiContextManager::~ImGuiContextManager() {
     ImGui::DestroyContext();
 }
 
-ImGuiFacade::ImGuiBinder::ImGuiBinder(GLFWFacade& glfw_facade) {
+void ImGuiFacade::ImGuiContextManager::EnableKeyboardControls() {
+    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+}
+
+ImGuiFacade::ImGuiBinder::ImGuiBinder(const GLFWFacade& glfw_facade) {
     // Setup Platform/Renderer bindings
     if (!ImGui_ImplGlfw_InitForOpenGL(glfw_facade.GetWindow(), true) ||
         !ImGui_ImplOpenGL3_Init()) {

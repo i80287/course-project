@@ -125,7 +125,8 @@ void ACTrie::NotifyAboutFoundSubstring(VertexIndex current_node_index,
     auto word_start_position = position_in_text + 1 - word_length;
 
     found_substrings_port_.Notify(FoundSubstringInfo{
-        .found_substring       = text.substr(word_start_position, word_length),
+        .found_substring =
+            std::string(text.substr(word_start_position, word_length)),
         .substring_start_index = word_start_position,
         .current_vertex_index  = current_node_index,
     });

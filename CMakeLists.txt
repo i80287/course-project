@@ -33,6 +33,7 @@ add_executable(vis_actrie_app
     App/ACTrieController.cpp
     App/React.cpp
     GraphicsUtils/Drawer.cpp
+    GraphicsUtils/DrawerUtils/StringHistoryManager.cpp
     GraphicsUtils/GLFWFacade.cpp
     GraphicsUtils/ImGuiFacade.cpp
     "${IMGUI_DIR}/imgui.cpp"

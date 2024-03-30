@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <limits>
 #include <queue>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -25,6 +26,10 @@ public:
     static constexpr char kAlphabetEnd       = 'z';
     static constexpr std::size_t kAlphabetLength =
         kAlphabetEnd - kAlphabetStart + 1;
+    static constexpr VertexIndex kNullNodeIndex     = 0;
+    static constexpr VertexIndex kFakePreRootIndex  = kNullNodeIndex + 1;
+    static constexpr VertexIndex kRootIndex         = kFakePreRootIndex + 1;
+    static constexpr VertexIndex kDefaultNodesCount = kRootIndex + 1;
 
     struct ACTNode final {
         static constexpr WordLength kMissingWord =
@@ -73,7 +78,7 @@ public:
         char parent_to_node_edge_symbol;
     };
     struct FoundSubstringInfo {
-        Pattern found_substring;
+        std::string found_substring;
         std::size_t substring_start_index;
         VertexIndex current_vertex_index;
     };
@@ -105,11 +110,6 @@ public:
 
 private:
     static constexpr std::size_t kDefaultNodesCapacity = 16;
-    static constexpr VertexIndex kNullNodeIndex        = 0;
-    static constexpr VertexIndex kFakePreRootIndex     = kNullNodeIndex + 1;
-    static constexpr VertexIndex kRootIndex            = kFakePreRootIndex + 1;
-    static constexpr VertexIndex kDefaultNodesCount    = kRootIndex + 1;
-
     void NotifyAboutFoundSubstring(VertexIndex current_node_index,
                                    std::size_t position_in_text,
                                    std::string_view text);
