@@ -4,7 +4,7 @@
 
 #include "GladFix.hpp"
 
-namespace AppSpace::GraphicFacades {
+namespace AppSpace::GraphicsUtils {
 
 class GLFWFacade final {
 public:
@@ -64,4 +64,4 @@ constexpr GLFWwindow* GLFWFacade::GetWindow() const noexcept {
     return window_manager_.GetWindow();
 }
 
-}  // namespace AppSpace::GraphicFacades
+}  // namespace AppSpace::GraphicsUtils

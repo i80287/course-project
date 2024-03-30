@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <stdexcept>
 
-namespace AppSpace::GraphicFacades {
+namespace AppSpace::GraphicsUtils {
 
 GLFWFacade::GLFWFacade(int window_width, int window_height,
                        const char* window_title)
@@ -92,4 +92,4 @@ bool GLFWFacade::TryLoadGLFW() const noexcept {
            glClear != nullptr;
 }
 
-}  // namespace AppSpace::GraphicFacades
+}  // namespace AppSpace::GraphicsUtils

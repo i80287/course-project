@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-namespace AppSpace::GraphicFacades {
+namespace AppSpace::GraphicsUtils {
 
 ImGuiFacade::ImGuiFacade()
     : glfw_facade_{}, context_manager_{}, imgui_binder_(glfw_facade_) {}
@@ -33,4 +33,4 @@ ImGuiFacade::ImGuiBinder::~ImGuiBinder() {
     ImGui_ImplGlfw_Shutdown();
 }
 
-}  // namespace AppSpace::GraphicFacades
+}  // namespace AppSpace::GraphicsUtils

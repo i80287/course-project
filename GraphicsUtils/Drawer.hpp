@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ACTrie.hpp"
-#include "Observer.hpp"
+#include "../App/ACTrie.hpp"
+#include "../App/Observer.hpp"
 
 namespace AppSpace {
 

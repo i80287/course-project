@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "ImGuiExtensions.hpp"
+#include "ImGuiFacade.hpp"
 
 namespace AppSpace {
 
@@ -22,9 +23,10 @@ Drawer::Drawer()
 }
 
 void Drawer::Draw() {
-    ImGui::Begin("wnd");
+    ImGui::ShowDemoWindow();
 
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    // ImGui::Begin("wnd");
+    // ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
     // TODO: this should be used for node drawing
     // static std::vector<ImVec2> points;
@@ -45,32 +47,33 @@ void Drawer::Draw() {
     //     }
     // }
 
-    ImVec2 canvas_pos  = ImGui::GetCursorScreenPos();
-    ImVec2 canvas_size = ImGui::GetContentRegionAvail();
-    if (canvas_size.x < 50.0f)
-        canvas_size.x = 50.0f;
-    if (canvas_size.y < 50.0f)
-        canvas_size.y = 50.0f;
-    ImVec2 canvas_end_pos = ImVecAdd(canvas_pos, canvas_size);
+    // ImVec2 canvas_pos  = ImGui::GetCursorScreenPos();
+    // ImVec2 canvas_size = ImGui::GetContentRegionAvail();
+    // if (canvas_size.x < 50.0f)
+    //     canvas_size.x = 50.0f;
+    // if (canvas_size.y < 50.0f)
+    //     canvas_size.y = 50.0f;
+    // ImVec2 canvas_end_pos = ImVecAdd(canvas_pos, canvas_size);
 
-    constexpr ImU32 kGrayColor  = IM_COL32(50, 50, 50, 255);
-    constexpr ImU32 kRedColor   = IM_COL32(250, 60, 50, 255);
-    constexpr ImU32 kWhiteColor = IM_COL32(255, 255, 255, 255);
-    draw_list->AddRectFilled(canvas_pos, canvas_end_pos, kGrayColor);
-    draw_list->AddRect(canvas_pos, canvas_end_pos, kWhiteColor);
+    // constexpr ImU32 kGrayColor  = IM_COL32(50, 50, 50, 255);
+    // constexpr ImU32 kRedColor   = IM_COL32(250, 60, 50, 255);
+    // constexpr ImU32 kWhiteColor = IM_COL32(255, 255, 255, 255);
+    // draw_list->AddRectFilled(canvas_pos, canvas_end_pos, kGrayColor);
+    // draw_list->AddRect(canvas_pos, canvas_end_pos, kWhiteColor);
 
-    // const auto& root_node =
-    // actrie_nodes_->operator[](ModelType::kRootIndex);
+    // // const auto& root_node =
+    // // actrie_nodes_->operator[](ModelType::kRootIndex);
 
-    ImVec2 circle_center = ImVecMiddle(canvas_pos, canvas_end_pos);
-    // TODO: replace magic numbers with constants
-    draw_list->AddCircle(circle_center, 36, IM_COL32(120, 80, 40, 255), 0, 3);
-    // std::string word_index_str = std::to_string(root_node.IsTerminal() ?
-    // root_node.word_index : 0); draw_list->AddText(circle_center,
-    // kRedColor, word_index_str.data(),
-    //                    word_index_str.data() + word_index_str.size());
+    // ImVec2 circle_center = ImVecMiddle(canvas_pos, canvas_end_pos);
+    // // TODO: replace magic numbers with constants
+    // draw_list->AddCircle(circle_center, 36, IM_COL32(120, 80, 40, 255), 0,
+    // 3);
+    // // std::string word_index_str = std::to_string(root_node.IsTerminal() ?
+    // // root_node.word_index : 0); draw_list->AddText(circle_center,
+    // // kRedColor, word_index_str.data(),
+    // //                    word_index_str.data() + word_index_str.size());
 
-    ImGui::End();
+    // ImGui::End();
 }
 
 Drawer::FoundSubstringObserver* Drawer::GetFoundStringsObserverPort() noexcept {

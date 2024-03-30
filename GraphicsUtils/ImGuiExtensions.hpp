@@ -2,7 +2,7 @@
 
 #include <imgui.h>
 
-namespace AppSpace {
+namespace AppSpace::ImGuiExtensions {
 
 /// @brief Returns vector in the middle of the first and second vectors
 /// @param first
@@ -57,4 +57,4 @@ constexpr ImVec4 ImVecDiff(const ImVec4& first, const ImVec4& second) noexcept {
                   first.w - second.w);
 }
 
-}  // namespace AppSpace
+}  // namespace AppSpace::ImGuiExtensions

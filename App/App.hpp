@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../GraphicFacades/ImGuiFacade.hpp"
+#include "../GraphicsUtils/ImGuiFacade.hpp"
 #include "ACTrie.hpp"
 #include "ACTrieController.hpp"
-#include "Drawer.hpp"
+#include "../GraphicsUtils/Drawer.hpp"
 
 namespace AppSpace {
 
@@ -15,7 +15,7 @@ public:
     void Run();
 
 private:
-    GraphicFacades::ImGuiFacade imgui_facade_;
+    GraphicsUtils::ImGuiFacade imgui_facade_;
     Drawer view_;
     ModelType model_;
     Controller::ACTrieController model_controller_;

@@ -1,3 +1,3 @@
 #! /bin/sh
 
-clang-tidy ./*.cpp ./App/*.cpp ./GraphicFacades/*.cpp --config-file=.clang-tidy -- -std=c++20 -I./external/glad/include -I./external/glfw/include -I./external/imgui -I./external/imgui/backends
+clang-tidy ./*.cpp ./App/*.cpp ./GraphicsUtils/*.cpp --config-file=.clang-tidy -- -std=c++20 -I./external/glad/include -I./external/glfw/include -I./external/imgui -I./external/imgui/backends

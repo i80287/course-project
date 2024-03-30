@@ -6,7 +6,7 @@
 
 #include "GLFWFacade.hpp"
 
-namespace AppSpace::GraphicFacades {
+namespace AppSpace::GraphicsUtils {
 
 class ImGuiFacade final {
 public:
@@ -62,4 +62,4 @@ private:
     ImGuiBinder imgui_binder_;
 };
 
-}  // namespace AppSpace::GraphicFacades
+}  // namespace AppSpace::GraphicsUtils
