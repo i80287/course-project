@@ -11,10 +11,10 @@ namespace AppSpace::GraphicsUtils {
 class ImGuiFacade final {
 public:
     ImGuiFacade();
-    ImGuiFacade(const ImGuiFacade&) = delete;
+    ImGuiFacade(const ImGuiFacade&)            = delete;
     ImGuiFacade& operator=(const ImGuiFacade&) = delete;
-    ImGuiFacade(ImGuiFacade&&) = delete;
-    ImGuiFacade& operator=(ImGuiFacade&&) = delete;
+    ImGuiFacade(ImGuiFacade&&)                 = delete;
+    ImGuiFacade& operator=(ImGuiFacade&&)      = delete;
 
     void StartRuntimeLoop(auto new_frame_code) {
         while (!glfw_facade_.ShouldClose()) {

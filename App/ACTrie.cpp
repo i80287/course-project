@@ -15,6 +15,11 @@ ACTrie::ACTrie()
       text_in_port_([this](Text text) { FindAllSubstringsInText(text); }) {
     nodes_.reserve(kDefaultNodesCapacity);
     nodes_.resize(kDefaultNodesCount);
+    nodes_[kFakePreRootIndex].edges.fill(kRootIndex);
+
+    // We don't notify about fake preroot node
+    //  because it should not be shown to the user.
+    NotifyAboutAddedNode(kRootIndex, kFakePreRootIndex, '\0');
 }
 
 ACTrie& ACTrie::AddPattern(std::string_view pattern) {
@@ -25,7 +30,7 @@ ACTrie& ACTrie::AddPattern(std::string_view pattern) {
     for (std::size_t i = 0; i < pattern.size(); i++) {
         const char symbol = pattern[i];
         if (SymbolToIndex(symbol) >= kAlphabetLength) {
-            bad_input_port_.SetDataAndNotify({i, symbol});
+            bad_input_port_.Notify({i, symbol});
             return *this;
         }
     }
@@ -48,22 +53,24 @@ ACTrie& ACTrie::AddPattern(std::string_view pattern) {
 
     for (VertexIndex new_node_index = VertexIndex(nodes_.size());
          pattern_iter != pattern_end; ++pattern_iter) {
-        VertexIndex symbol_index = SymbolToIndex(*pattern_iter);
+        char symbol              = *pattern_iter;
+        VertexIndex symbol_index = SymbolToIndex(symbol);
         nodes_.emplace_back();
         nodes_[current_node_index][symbol_index] = new_node_index;
-        current_node_index                       = new_node_index++;
+        NotifyAboutAddedNode(new_node_index, current_node_index, symbol);
+        current_node_index = new_node_index++;
     }
 
-    nodes_[current_node_index].word_index = WordLength(words_lengths_.size());
-    words_lengths_.push_back(WordLength(pattern.size()));
+    nodes_[current_node_index].word_index =
+        static_cast<WordLength>(words_lengths_.size());
+    words_lengths_.push_back(static_cast<WordLength>(pattern.size()));
     return *this;
 }
 
 ACTrie& ACTrie::FindAllSubstringsInText(std::string_view text) {
     if (!IsReady()) {
-        ComputeLinksForNodes(nodes_);
+        ComputeLinksForNodes().is_ready_ = true;
         assert(IsACTrieInCorrectState());
-        is_ready_ = true;
     }
 
     VertexIndex current_node_index = kRootIndex;
@@ -94,12 +101,17 @@ ACTrie& ACTrie::ResetACTrie() {
     return *this;
 }
 
-ACTrie& ACTrie::AddSubscriber(Observer<FoundSubstringInfo>* observer) {
+ACTrie& ACTrie::AddSubscriber(UpdatedNodeObserver* observer) {
+    updated_nodes_port_.Subscribe(observer);
+    return *this;
+}
+
+ACTrie& ACTrie::AddSubscriber(FoundSubstringObserver* observer) {
     found_substrings_port_.Subscribe(observer);
     return *this;
 }
 
-ACTrie& ACTrie::AddSubscriber(Observer<BadInputPatternInfo>* observer) {
+ACTrie& ACTrie::AddSubscriber(BadInputPatternObserver* observer) {
     bad_input_port_.Subscribe(observer);
     return *this;
 }
@@ -112,12 +124,10 @@ void ACTrie::NotifyAboutFoundSubstring(VertexIndex current_node_index,
     auto word_length         = words_lengths_[word_index];
     auto word_start_position = position_in_text + 1 - word_length;
 
-    found_substrings_port_.SetDataAndNotify(FoundSubstringInfo{
-        .nodes                = nodes_,
-        .words_lengths        = words_lengths_,
-        .status               = DataStatus::kFoundNewSubstring,
-        .found_substring      = text.substr(word_start_position, word_length),
-        .current_vertex_index = current_node_index,
+    found_substrings_port_.Notify(FoundSubstringInfo{
+        .found_substring       = text.substr(word_start_position, word_length),
+        .substring_start_index = word_start_position,
+        .current_vertex_index  = current_node_index,
     });
 }
 
@@ -144,40 +154,51 @@ ACTrie::VertexIndex ACTrie::SymbolToIndex(char symbol) noexcept {
     return static_cast<VertexIndex>(symbol_as_int) - kAlphabetStart;
 }
 
-void ACTrie::ComputeLinksForNodes(std::vector<ACTNode>& nodes) {
-    nodes[kRootIndex].suffix_link            = kFakePreRootIndex;
-    nodes[kRootIndex].compressed_suffix_link = kRootIndex;
-    nodes[kFakePreRootIndex].edges.fill(kRootIndex);
+ACTrie& ACTrie::ComputeLinksForNodes() {
+    nodes_[kRootIndex].suffix_link            = kFakePreRootIndex;
+    nodes_[kRootIndex].compressed_suffix_link = kRootIndex;
+    NotifyAboutComputedSuffixLinks(kRootIndex, kFakePreRootIndex, '\0');
+
     std::queue<VertexIndex> bfs_queue;
     bfs_queue.push(kRootIndex);
     do {
         VertexIndex vertex_index = bfs_queue.front();
         bfs_queue.pop();
-        ComputeLinksForNodeChildren(nodes[vertex_index], nodes, bfs_queue);
+        ComputeLinksForNodeChildren(vertex_index, bfs_queue);
     } while (!bfs_queue.empty());
+    return *this;
 }
 
-void ACTrie::ComputeLinksForNodeChildren(ACTNode& node,
-                                         std::vector<ACTNode>& nodes,
+void ACTrie::ComputeLinksForNodeChildren(VertexIndex node_index,
                                          std::queue<VertexIndex>& bfs_queue) {
-    for (std::size_t child_node_index = 0; child_node_index < kAlphabetLength;
-         child_node_index++) {
+    ACTNode& node = nodes_[node_index];
+    for (std::size_t child_node_symbol_index = 0;
+         child_node_symbol_index < kAlphabetLength; child_node_symbol_index++) {
         VertexIndex child_link_v_index =
-            nodes[node.suffix_link][child_node_index];
+            nodes_[node.suffix_link][child_node_symbol_index];
         assert(child_link_v_index != kNullNodeIndex);
-        VertexIndex child_index = node[child_node_index];
+        VertexIndex child_index = node[child_node_symbol_index];
         if (child_index != kNullNodeIndex) {
-            nodes[child_index].suffix_link = child_link_v_index;
-            assert(nodes[child_link_v_index].compressed_suffix_link !=
+            nodes_[child_index].suffix_link = child_link_v_index;
+            assert(nodes_[child_link_v_index].compressed_suffix_link !=
                    kNullNodeIndex);
-            nodes[child_index].compressed_suffix_link =
-                (!nodes[child_link_v_index].IsTerminal() &&
-                 child_link_v_index != kRootIndex)
-                    ? nodes[child_link_v_index].compressed_suffix_link
-                    : child_link_v_index;
+
+            bool suffix_child_is_terminal_or_root =
+                nodes_[child_link_v_index].IsTerminal() ||
+                child_link_v_index == kRootIndex;
+            nodes_[child_index].compressed_suffix_link =
+                suffix_child_is_terminal_or_root
+                    ? child_link_v_index
+                    : nodes_[child_link_v_index].compressed_suffix_link;
+
+            char parent_to_node_edge_symbol =
+                static_cast<char>(kAlphabetStart + child_node_symbol_index);
+            NotifyAboutComputedSuffixLinks(child_index, node_index,
+                                           parent_to_node_edge_symbol);
+
             bfs_queue.push(child_index);
         } else {
-            node[child_node_index] = child_link_v_index;
+            node[child_node_symbol_index] = child_link_v_index;
         }
     }
 }
@@ -217,6 +238,30 @@ bool ACTrie::IsFakePrerootInCorrectState() const {
     const auto& edges = nodes_[kFakePreRootIndex].edges;
     return std::all_of(edges.begin(), edges.end(), [](VertexIndex child_index) {
         return child_index == kRootIndex;
+    });
+}
+
+void ACTrie::NotifyAboutAddedNode(VertexIndex added_node_index,
+                                  VertexIndex node_parent_index,
+                                  char parent_to_node_edge_symbol) {
+    updated_nodes_port_.Notify(UpdatedNodeInfo{
+        .node_index                 = added_node_index,
+        .node_parent_index          = node_parent_index,
+        .node                       = nodes_[added_node_index],
+        .status                     = UpdatedNodeStatus::kAdded,
+        .parent_to_node_edge_symbol = parent_to_node_edge_symbol,
+    });
+}
+
+void ACTrie::NotifyAboutComputedSuffixLinks(VertexIndex node_index,
+                                            VertexIndex node_parent_index,
+                                            char parent_to_node_edge_symbol) {
+    updated_nodes_port_.Notify(UpdatedNodeInfo{
+        .node_index                 = node_index,
+        .node_parent_index          = node_parent_index,
+        .node                       = nodes_[node_index],
+        .status                     = UpdatedNodeStatus::kSuffixLinksComputed,
+        .parent_to_node_edge_symbol = parent_to_node_edge_symbol,
     });
 }
 

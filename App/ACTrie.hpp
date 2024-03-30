@@ -60,38 +60,55 @@ public:
         }
     };
 
-    enum class DataStatus : std::uint32_t { kFoundNewSubstring };
+    enum class UpdatedNodeStatus {
+        kAdded,
+        kSuffixLinksComputed,
+    };
 
+    struct UpdatedNodeInfo {
+        VertexIndex node_index;
+        VertexIndex node_parent_index;
+        std::reference_wrapper<const ACTNode> node;
+        UpdatedNodeStatus status;
+        char parent_to_node_edge_symbol;
+    };
     struct FoundSubstringInfo {
-        std::reference_wrapper<const std::vector<ACTNode>> nodes;
-        std::reference_wrapper<const std::vector<WordLength>>
-            words_lengths;
-        DataStatus status{};
-        Pattern found_substring{};
-        std::size_t substring_start_index{};
-        VertexIndex current_vertex_index{};
+        Pattern found_substring;
+        std::size_t substring_start_index;
+        VertexIndex current_vertex_index;
     };
-
     struct BadInputPatternInfo {
-        std::size_t symbol_index{};
-        char bad_symbol{};
+        std::size_t symbol_index;
+        char bad_symbol;
     };
+    using UpdatedNodeInfoPassBy = std::add_rvalue_reference_t<UpdatedNodeInfo>;
+    using FoundSubstringInfoPassBy =
+        std::add_rvalue_reference_t<FoundSubstringInfo>;
+    using BadInputPatternInfoPassBy =
+        std::add_rvalue_reference_t<BadInputPatternInfo>;
+    using UpdatedNodeObserver =
+        Observer<UpdatedNodeInfo, UpdatedNodeInfoPassBy>;
+    using FoundSubstringObserver =
+        Observer<FoundSubstringInfo, FoundSubstringInfoPassBy>;
+    using BadInputPatternObserver =
+        Observer<BadInputPatternInfo, BadInputPatternInfoPassBy>;
 
     ACTrie();
     ACTrie& AddPattern(Pattern pattern);
     ACTrie& FindAllSubstringsInText(Text text);
     ACTrie& ResetACTrie();
-    ACTrie& AddSubscriber(Observer<FoundSubstringInfo>* observer);
-    ACTrie& AddSubscriber(Observer<BadInputPatternInfo>* observer);
+    ACTrie& AddSubscriber(UpdatedNodeObserver* observer);
+    ACTrie& AddSubscriber(FoundSubstringObserver* observer);
+    ACTrie& AddSubscriber(BadInputPatternObserver* observer);
     constexpr std::size_t NodesSize() const noexcept;
     constexpr std::size_t PatternsSize() const noexcept;
 
 private:
     static constexpr std::size_t kDefaultNodesCapacity = 16;
     static constexpr VertexIndex kNullNodeIndex        = 0;
-    static constexpr VertexIndex kFakePreRootIndex = kNullNodeIndex + 1;
-    static constexpr VertexIndex kRootIndex        = kFakePreRootIndex + 1;
-    static constexpr VertexIndex kDefaultNodesCount = kRootIndex + 1;
+    static constexpr VertexIndex kFakePreRootIndex     = kNullNodeIndex + 1;
+    static constexpr VertexIndex kRootIndex            = kFakePreRootIndex + 1;
+    static constexpr VertexIndex kDefaultNodesCount    = kRootIndex + 1;
 
     void NotifyAboutFoundSubstring(VertexIndex current_node_index,
                                    std::size_t position_in_text,
@@ -101,18 +118,25 @@ private:
                                           std::string_view text);
     constexpr bool IsReady() const noexcept;
     static VertexIndex SymbolToIndex(char symbol) noexcept;
-    static void ComputeLinksForNodes(std::vector<ACTNode>&);
-    static void ComputeLinksForNodeChildren(ACTNode&,
-                                            std::vector<ACTNode>&,
-                                            std::queue<VertexIndex>&);
+    ACTrie& ComputeLinksForNodes();
+    void ComputeLinksForNodeChildren(VertexIndex node_index,
+                                     std::queue<VertexIndex>& queue);
     bool IsACTrieInCorrectState() const;
     bool IsFakePrerootInCorrectState() const;
+    void NotifyAboutAddedNode(VertexIndex added_node_index,
+                              VertexIndex node_parent_index,
+                              char parent_to_node_edge_symbol);
+    void NotifyAboutComputedSuffixLinks(VertexIndex node_index,
+                                        VertexIndex node_parent_index,
+                                        char parent_to_node_edge_symbol);
 
     std::vector<ACTNode> nodes_;
     std::vector<WordLength> words_lengths_;
     bool is_ready_ = false;
-    Observable<FoundSubstringInfo> found_substrings_port_;
-    Observable<BadInputPatternInfo> bad_input_port_;
+    Observable<UpdatedNodeInfo, UpdatedNodeInfoPassBy> updated_nodes_port_;
+    Observable<FoundSubstringInfo, FoundSubstringInfoPassBy>
+        found_substrings_port_;
+    Observable<BadInputPatternInfo, BadInputPatternInfoPassBy> bad_input_port_;
     Observer<Pattern> pattern_in_port_;
     Observer<Text> text_in_port_;
 };
