@@ -14,12 +14,7 @@ ACTrie::ACTrie()
     : pattern_in_port_([this](Pattern pattern) { AddPattern(pattern); }),
       text_in_port_([this](Text text) { FindAllSubstringsInText(text); }) {
     nodes_.reserve(kDefaultNodesCapacity);
-    nodes_.resize(kDefaultNodesCount);
-    nodes_[kFakePreRootIndex].edges.fill(kRootIndex);
-
-    // We don't notify about fake preroot node
-    //  because it should not be shown to the user.
-    NotifyAboutAddedNode(kRootIndex, kFakePreRootIndex, '\0');
+    ResetACTrie();
 }
 
 ACTrie& ACTrie::AddPattern(std::string_view pattern) {
@@ -96,8 +91,13 @@ ACTrie& ACTrie::FindAllSubstringsInText(std::string_view text) {
 ACTrie& ACTrie::ResetACTrie() {
     nodes_.clear();
     words_lengths_.clear();
-    nodes_.resize(kDefaultNodesCapacity);
+    nodes_.resize(kInitialNodesCount);
+    nodes_[kFakePreRootIndex].edges.fill(kRootIndex);
     is_ready_ = false;
+
+    // We don't notify about fake preroot node
+    //  because it should not be shown to the user.
+    NotifyAboutAddedNode(kRootIndex, kFakePreRootIndex, '\0');
     return *this;
 }
 
@@ -205,7 +205,7 @@ void ACTrie::ComputeLinksForNodeChildren(VertexIndex node_index,
 }
 
 bool ACTrie::IsACTrieInCorrectState() const {
-    if (nodes_.size() < kDefaultNodesCount) {
+    if (nodes_.size() < kInitialNodesCount) {
         return false;
     }
     if (!IsFakePrerootInCorrectState()) {

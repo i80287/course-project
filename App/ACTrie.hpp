@@ -29,7 +29,7 @@ public:
     static constexpr VertexIndex kNullNodeIndex     = 0;
     static constexpr VertexIndex kFakePreRootIndex  = kNullNodeIndex + 1;
     static constexpr VertexIndex kRootIndex         = kFakePreRootIndex + 1;
-    static constexpr VertexIndex kDefaultNodesCount = kRootIndex + 1;
+    static constexpr VertexIndex kInitialNodesCount = kRootIndex + 1;
 
     struct ACTNode final {
         static constexpr WordLength kMissingWord =
