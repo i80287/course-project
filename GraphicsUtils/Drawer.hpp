@@ -39,6 +39,7 @@ public:
     void OnNewFrame();
 
 private:
+    void HandleNextEvent();
     void SetupImGuiStyle();
     void OnUpdatedNode(UpdatedNodeInfoPassBy updated_node_info);
     void OnFoundSubstring(FoundSubstringInfoPassBy substring_info);

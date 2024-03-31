@@ -53,6 +53,11 @@ Drawer& Drawer::AddTextSubscriber(TextObserver* observer) {
 }
 
 void Drawer::OnNewFrame() {
+    HandleNextEvent();
+    Draw();
+}
+
+void Drawer::HandleNextEvent() {
     if (!events_.empty()) {
         EventType event = std::move(events_.front());
         events_.pop();
@@ -73,8 +78,6 @@ void Drawer::OnNewFrame() {
                 break;
         }
     }
-
-    Draw();
 }
 
 void Drawer::SetupImGuiStyle() {
