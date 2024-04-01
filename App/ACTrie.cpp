@@ -10,9 +10,7 @@
 
 namespace AppSpace::ACTrieDS {
 
-ACTrie::ACTrie()
-    : pattern_in_port_([this](Pattern pattern) { AddPattern(pattern); }),
-      text_in_port_([this](Text text) { FindAllSubstringsInText(text); }) {
+ACTrie::ACTrie() {
     nodes_.reserve(kDefaultNodesCapacity);
     nodes_.resize(kInitialNodesCount);
     nodes_[kFakePreRootIndex].edges.fill(kRootIndex);

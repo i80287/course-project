@@ -109,23 +109,25 @@ void Drawer::HandleNodeUpdate(const UpdatedNodeInfo& updated_node_info) {
     }
 
     switch (updated_node_info.status) {
-        case ACTrieModel::UpdatedNodeStatus::kAdded:
+        case ACTrieModel::UpdatedNodeStatus::kAdded: {
             model_nodes_.emplace_back(updated_node_info.node);
             assert(node_index == model_nodes_.size() - 1);
             node_status_.emplace(
-                updated_node_info.node_index,
+                node_index,
                 NodeState{
-                    .node_index        = node_index,
                     .node_parent_index = node_parent_index,
                     .status            = NodeStatus::kAdded,
                     .parent_to_node_edge_symbol =
                         updated_node_info.parent_to_node_edge_symbol,
                 });
             logger.DebugLog("Added new node");
-            break;
-        case ACTrieModel::UpdatedNodeStatus::kSuffixLinksComputed:
-            logger.DebugLog("Added new node");
-            break;
+        } break;
+        case ACTrieModel::UpdatedNodeStatus::kSuffixLinksComputed: {
+            auto node_iter = node_status_.find(node_index);
+            assert(node_iter != node_status_.end());
+            node_iter->second.status = NodeStatus::kSuffixLinksComputed;
+            logger.DebugLog("Updated suffix links status for node");
+        } break;
         default:
             assert(false);
             break;
@@ -144,6 +146,8 @@ void Drawer::HandleBadPatternInput(
 void Drawer::Draw() {
     using namespace ImGuiExtensions;
     using namespace std::string_view_literals;
+
+    ImGui::ShowDemoWindow();
 
     if (disable_window_rounding_) {
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
@@ -181,8 +185,13 @@ void Drawer::Draw() {
     draw_list->AddRect(canvas_screen_pos, canvas_end_pos,
                        Palette::AsImU32::kWhiteColor);
 
-    AddTextConsole(text_io_start_pos, footer_height_to_reserve,
-                   text_input_width);
+    if (inputing_text_state_) {
+        AddTextInputConsole(text_io_start_pos, footer_height_to_reserve,
+                            text_input_width);
+    } else {
+        AddPattenInputConsole(text_io_start_pos, footer_height_to_reserve,
+                              text_input_width);
+    }
 
     ImGui::End();
     if (disable_window_rounding_) {
@@ -190,11 +199,11 @@ void Drawer::Draw() {
     }
 }
 
-void Drawer::AddTextConsole(ImVec2 text_io_start_pos,
-                            float footer_height_to_reserve,
-                            float text_input_width) {
+void Drawer::AddPattenInputConsole(ImVec2 text_io_start_pos,
+                                   float footer_height_to_reserve,
+                                   float text_input_width) {
     ImGui::SetCursorScreenPos(text_io_start_pos);
-    ImGui::BeginChild("TextIObar");
+    ImGui::BeginChild("PatternInputBar");
 
     if (ImGui::SmallButton("Clear")) {
         ClearPatternInputLog();
@@ -217,16 +226,18 @@ void Drawer::AddTextConsole(ImVec2 text_io_start_pos,
     // ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
     //                     ImVec2(4, 1));  // Tighten spacing
 
-    if (copy_to_clipboard)
+    if (copy_to_clipboard) {
         ImGui::LogToClipboard();
+    }
     for (const std::string& item : patterns_input_history_) {
         ImVec4 color = Palette::AsImColor::kRedColor;
         ImGui::PushStyleColor(ImGuiCol_Text, color);
         ImGui::TextUnformatted(item.data(), item.data() + item.size());
         ImGui::PopStyleColor();
     }
-    if (copy_to_clipboard)
+    if (copy_to_clipboard) {
         ImGui::LogFinish();
+    }
 
     // Keep up at the bottom of the scroll region if we were already at the
     // bottom at the beginning of the frame. Using a scrollbar or
@@ -246,6 +257,15 @@ void Drawer::AddTextConsole(ImVec2 text_io_start_pos,
     if (reclaim_focus) {
         ImGui::SetKeyboardFocusHere(-1);
     }
+
+    ImGui::EndChild();
+}
+
+void Drawer::AddTextInputConsole(ImVec2 text_io_start_pos,
+                                 float footer_height_to_reserve,
+                                 float text_input_width) {
+    ImGui::SetCursorScreenPos(text_io_start_pos);
+    ImGui::BeginChild("PatternInputBar");
 
     ImGui::EndChild();
 }

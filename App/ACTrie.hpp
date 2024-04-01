@@ -116,7 +116,6 @@ private:
     void JumpThroughCompressedSuffixLinks(VertexIndex current_node_index,
                                           std::size_t position_in_text,
                                           std::string_view text);
-    constexpr bool IsReady() const noexcept;
     static VertexIndex SymbolToIndex(char symbol) noexcept;
     ACTrie& ComputeLinksForNodes();
     void ComputeLinksForNodeChildren(VertexIndex node_index,
@@ -139,13 +138,7 @@ private:
     Observable<FoundSubstringInfo, FoundSubstringInfoPassBy>
         found_substrings_port_;
     Observable<BadInputPatternInfo, BadInputPatternInfoPassBy> bad_input_port_;
-    Observer<Pattern> pattern_in_port_;
-    Observer<Text> text_in_port_;
 };
-
-constexpr bool ACTrie::IsReady() const noexcept {
-    return is_ready_;
-}
 
 constexpr std::size_t ACTrie::NodesSize() const noexcept {
     return nodes_.size();

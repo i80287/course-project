@@ -48,8 +48,12 @@ private:
     void HandleFoundSubstring(const FoundSubstringInfo& updated_node_info);
     void HandleBadPatternInput(const BadInputPatternInfo& updated_node_info);
     void Draw();
-    void AddTextConsole(ImVec2 text_io_start_pos,
-                        float footer_height_to_reserve, float text_input_width);
+    void AddPattenInputConsole(ImVec2 text_io_start_pos,
+                               float footer_height_to_reserve,
+                               float text_input_width);
+    void AddTextInputConsole(ImVec2 text_io_start_pos,
+                             float footer_height_to_reserve,
+                             float text_input_width);
     bool AddPatternTextInput(float text_input_width);
     void TextEditCallback(ImGuiInputTextCallbackData& data);
     void ClearPatternInputLog() {
@@ -89,7 +93,6 @@ private:
         kFoundSubstringInThisNode,
     };
     struct NodeState final {
-        ACTrieModel::VertexIndex node_index;
         ACTrieModel::VertexIndex node_parent_index;
         NodeStatus status;
         char parent_to_node_edge_symbol;
@@ -113,6 +116,7 @@ private:
     BadInputPatternObserver bad_input_port_;
     Observable<Pattern> user_pattern_input_port_;
     Observable<Text> user_text_input_port_;
+    Observable<void, void> clear_signal_port_;
     std::queue<EventType> events_;
     std::vector<ACTrieModel::ACTNode> model_nodes_;
     std::map<ACTrieModel::VertexIndex, NodeState> node_status_;
@@ -126,6 +130,7 @@ private:
     bool suppressor_flag_         = false;
     bool scroll_to_bottom_        = false;
     bool auto_scroll_             = false;
+    bool inputing_text_state_     = false;
 };
 
 }  // namespace AppSpace::GraphicsUtils
