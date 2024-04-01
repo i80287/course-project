@@ -34,7 +34,6 @@ public:
     }
     std::string_view MoveToPreviousInputAndRead() noexcept;
     std::string_view MoveToNextInputAndRead() noexcept;
-    static std::string_view TrimSpaces(std::string_view str) noexcept;
 
 private:
     std::vector<std::string> history_;

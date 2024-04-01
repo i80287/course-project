@@ -51,15 +51,17 @@ private:
     void HandleBadPatternInput(const BadInputPatternInfo& updated_node_info);
     void Draw();
     void DrawACTrieTree(ImVec2 canvas_screen_pos, ImVec2 canvas_end_pos);
-    void DrawIOBlocks(ImVec2 io_blocks_start_pos,
-                      ImVec2 end_of_available_space);
-    void DrawPatternInput(ImVec2 io_block_start_pos, ImVec2 io_block_end_pos);
-    void DrawTextInput(ImVec2 text_io_start_pos,
-                       float footer_height_to_reserve);
-    bool AddPatternTextInput(float text_input_width);
-    void TextEditCallback(ImGuiInputTextCallbackData& data);
+    void DrawIOBlocks(ImVec2 io_blocks_start_pos, ImVec2 io_blocks_end_pos);
+    void DrawPatternInputBlock(ImVec2 block_start_pos, ImVec2 block_end_pos);
+    void DrawFoundWordsBlock(ImVec2 block_start_pos, ImVec2 block_end_pos);
+    void DrawTextInputBlock(ImVec2 block_start_pos, ImVec2 block_end_pos);
+    bool AddPatternInput(float text_input_width);
+    bool AddTextInput(float text_input_width);
+    void PatternInputImGuiCallback(ImGuiInputTextCallbackData& data);
+    void TextInputImGuiCallback(ImGuiInputTextCallbackData& data);
     void ClearStateAndNotify();
-    void ClearPatternInputBuffer() noexcept;
+    void ClearInputBuffer() noexcept;
+    static std::string_view TrimSpaces(std::string_view str) noexcept;
 
     struct Palette final {
         struct AsImU32 final {
@@ -67,9 +69,9 @@ private:
             static constexpr ImU32 kRedColor   = IM_COL32(250, 60, 50, 255);
             static constexpr ImU32 kBlackColor = IM_COL32_BLACK;
             static constexpr ImU32 kWhiteColor = IM_COL32_WHITE;
+            static constexpr ImU32 kGreenColor = IM_COL32(0, 250, 0, 255);
         };
 
-        // ImColor is actually a vector of 4 floats.
         struct AsImColor final {
             static constexpr ImColor kGrayColor = ImColor(AsImU32::kGrayColor);
             static constexpr ImColor kRedColor  = ImColor(AsImU32::kRedColor);
@@ -77,15 +79,26 @@ private:
                 ImColor(AsImU32::kBlackColor);
             static constexpr ImColor kWhiteColor =
                 ImColor(AsImU32::kWhiteColor);
+            static constexpr ImColor kGreenColor =
+                ImColor(AsImU32::kGreenColor);
         };
     };
 
     struct CanvasConstants final {
-        static constexpr float kTreeDrawingCanvasScaleX       = 0.7f;
-        static constexpr float kTreeDrawingCanvasScaleY       = 0.95f;
+        static constexpr float kTreeDrawingCanvasScaleX       = 0.6f;
+        static constexpr float kTreeDrawingCanvasScaleY       = 1.0f;
         static constexpr float kTreeDrawingCanvasIndentScaleX = 0.005f;
-        static constexpr float kPatternInputFieldWidthScaleX  = 0.1f;
+        static constexpr float kPatternInputFieldWidthScaleX  = 0.5f;
         static constexpr float kIOBlocksIndentScaleX          = 0.005f;
+        static constexpr float kTextInputHeightScaleY         = 0.05f;
+        static constexpr float kTextInputIndentScaleY         = 0.005f;
+        static constexpr float kButtonDecreaseScale           = 2.0f;
+        static constexpr int kNumberOfIOBlocks                = 2;
+
+        static_assert(kTreeDrawingCanvasScaleX +
+                          kTreeDrawingCanvasIndentScaleX +
+                          kIOBlocksIndentScaleX <
+                      1.0f);
     };
 
     enum class NodeStatus {
@@ -122,16 +135,18 @@ private:
     std::deque<EventType> events_;
     std::vector<ACTrieModel::ACTNode> model_nodes_;
     std::map<ACTrieModel::VertexIndex, NodeState> nodes_status_;
-    static constexpr std::size_t kPatternInputBufferSize = 64;
-    std::array<char, kPatternInputBufferSize> pattern_input_buffer_{'\0'};
     DrawerUtils::StringHistoryManager patterns_input_history_;
-    bool no_resize_               = false;
-    bool no_decoration_           = false;
-    bool disable_window_rounding_ = false;
-    bool suppressor_flag_         = false;
-    bool scroll_to_bottom_        = false;
-    bool auto_scroll_             = false;
-    bool inputing_text_state_     = false;
+    DrawerUtils::StringHistoryManager texts_input_history_;
+    std::vector<std::string> found_words_;
+    bool is_no_resize_                                   = false;
+    bool is_no_decoration_                               = false;
+    bool is_window_rounding_disabled_                    = false;
+    bool is_scroll_to_bottom_                            = false;
+    bool is_auto_scroll_                                 = false;
+    bool is_inputing_text_                               = false;
+    bool is_clear_button_pressed_                        = false;
+    static constexpr std::size_t kPatternInputBufferSize = 512;
+    std::array<char, kPatternInputBufferSize> input_buffer_{'\0'};
 };
 
 }  // namespace AppSpace::GraphicsUtils
