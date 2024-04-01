@@ -11,20 +11,20 @@ class ACTrieController final {
     using Text        = ACTrieModel::Text;
 
 public:
-    using PatternObserver   = Observer<Pattern>;
-    using TextObserver      = Observer<Text>;
-    using TrieResetObserver = Observer<void, void>;
+    using PatternObserver     = Observer<Pattern>;
+    using TextObserver        = Observer<Text>;
+    using ACTrieResetObserver = Observer<void, void>;
 
     ACTrieController(ACTrieModel& host_model);
     PatternObserver* GetPatternObserverPort() noexcept;
     TextObserver* GetTextObserverPort() noexcept;
-    TrieResetObserver* GetTrieResetObserverPort() noexcept;
+    ACTrieResetObserver* GetACTrieResetObserverPort() noexcept;
 
 private:
     ACTrieModel* model_ = nullptr;
     PatternObserver pattern_port_;
     TextObserver text_port_;
-    TrieResetObserver trie_reset_port_;
+    ACTrieResetObserver actrie_reset_port_;
 };
 
 }  // namespace AppSpace::Controller

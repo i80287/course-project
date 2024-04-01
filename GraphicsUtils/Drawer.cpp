@@ -16,6 +16,7 @@
 namespace AppSpace::GraphicsUtils {
 
 using DrawerUtils::logger;
+using namespace ImGuiExtensions;
 
 Drawer::Drawer()
     : updated_node_port_([this](UpdatedNodeInfoPassBy updated_node_info) {
@@ -56,6 +57,11 @@ Drawer& Drawer::AddTextSubscriber(TextObserver* observer) {
     return *this;
 }
 
+Drawer& Drawer::AddACTrieResetSubscriber(ACTrieResetObserver* observer) {
+    actrie_reset_port_.Subscribe(observer);
+    return *this;
+}
+
 void Drawer::OnNewFrame() {
     HandleNextEvent();
     Draw();
@@ -64,7 +70,7 @@ void Drawer::OnNewFrame() {
 void Drawer::HandleNextEvent() {
     if (!events_.empty()) {
         EventType event = std::move(events_.front());
-        events_.pop();
+        events_.pop_front();
         switch (event.index()) {
             case kUpdateNodeEventIndex:
                 HandleNodeUpdate(std::get<kUpdateNodeEventIndex>(event));
@@ -89,15 +95,17 @@ void Drawer::SetupImGuiStyle() {
 }
 
 void Drawer::OnUpdatedNode(UpdatedNodeInfoPassBy updated_node_info) {
-    events_.emplace(std::forward<UpdatedNodeInfoPassBy>(updated_node_info));
+    events_.emplace_back(
+        std::forward<UpdatedNodeInfoPassBy>(updated_node_info));
 }
 
 void Drawer::OnFoundSubstring(FoundSubstringInfoPassBy substring_info) {
-    events_.emplace(std::forward<FoundSubstringInfo>(substring_info));
+    events_.emplace_back(std::forward<FoundSubstringInfo>(substring_info));
 }
 
 void Drawer::OnBadPatternInput(BadInputPatternInfoPassBy bad_input_info) {
-    events_.emplace(std::forward<BadInputPatternInfoPassBy>(bad_input_info));
+    events_.emplace_back(
+        std::forward<BadInputPatternInfoPassBy>(bad_input_info));
 }
 
 void Drawer::HandleNodeUpdate(const UpdatedNodeInfo& updated_node_info) {
@@ -112,7 +120,7 @@ void Drawer::HandleNodeUpdate(const UpdatedNodeInfo& updated_node_info) {
         case ACTrieModel::UpdatedNodeStatus::kAdded: {
             model_nodes_.emplace_back(updated_node_info.node);
             assert(node_index == model_nodes_.size() - 1);
-            node_status_.emplace(
+            nodes_status_.emplace(
                 node_index,
                 NodeState{
                     .node_parent_index = node_parent_index,
@@ -123,8 +131,8 @@ void Drawer::HandleNodeUpdate(const UpdatedNodeInfo& updated_node_info) {
             logger.DebugLog("Added new node");
         } break;
         case ACTrieModel::UpdatedNodeStatus::kSuffixLinksComputed: {
-            auto node_iter = node_status_.find(node_index);
-            assert(node_iter != node_status_.end());
+            auto node_iter = nodes_status_.find(node_index);
+            assert(node_iter != nodes_status_.end());
             node_iter->second.status = NodeStatus::kSuffixLinksComputed;
             logger.DebugLog("Updated suffix links status for node");
         } break;
@@ -144,9 +152,6 @@ void Drawer::HandleBadPatternInput(
 }
 
 void Drawer::Draw() {
-    using namespace ImGuiExtensions;
-    using namespace std::string_view_literals;
-
     ImGui::ShowDemoWindow();
 
     if (disable_window_rounding_) {
@@ -162,9 +167,9 @@ void Drawer::Draw() {
     }
     ImGui::Begin("Visualization App Main Window", nullptr, window_begin_flags);
 
-    const ImVec2 canvas_screen_pos = ImGui::GetCursorScreenPos();
-    const ImVec2 available_size =
-        ImGui::GetContentRegionAvail();  // + ImGui::GetWindowPos();
+    const ImVec2 canvas_screen_pos      = ImGui::GetCursorScreenPos();
+    const ImVec2 available_size         = ImGui::GetContentRegionAvail();
+    const ImVec2 end_of_available_space = canvas_screen_pos + available_size;
     const auto [available_width, available_height] = available_size;
     const ImVec2 canvas_size(
         available_width * CanvasConstants::kTreeDrawingCanvasScaleX,
@@ -172,26 +177,10 @@ void Drawer::Draw() {
     const ImVec2 canvas_end_pos = canvas_screen_pos + canvas_size;
     const float tree_indent_width =
         available_width * CanvasConstants::kTreeDrawingCanvasIndentScaleX;
-    const ImVec2 text_io_start_pos(canvas_end_pos.x + tree_indent_width,
-                                   canvas_screen_pos.y);
-    const float text_input_width =
-        available_width * CanvasConstants::kPatternInputFieldWidthScaleX;
-    const float footer_height_to_reserve =
-        ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
-
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    draw_list->AddRectFilled(canvas_screen_pos, canvas_end_pos,
-                             Palette::AsImU32::kGrayColor);
-    draw_list->AddRect(canvas_screen_pos, canvas_end_pos,
-                       Palette::AsImU32::kWhiteColor);
-
-    if (inputing_text_state_) {
-        AddTextInputConsole(text_io_start_pos, footer_height_to_reserve,
-                            text_input_width);
-    } else {
-        AddPattenInputConsole(text_io_start_pos, footer_height_to_reserve,
-                              text_input_width);
-    }
+    const ImVec2 io_blocks_start_pos(canvas_end_pos.x + tree_indent_width,
+                                     canvas_screen_pos.y);
+    DrawACTrieTree(canvas_screen_pos, canvas_end_pos);
+    DrawIOBlocks(io_blocks_start_pos, end_of_available_space);
 
     ImGui::End();
     if (disable_window_rounding_) {
@@ -199,26 +188,47 @@ void Drawer::Draw() {
     }
 }
 
-void Drawer::AddPattenInputConsole(ImVec2 text_io_start_pos,
-                                   float footer_height_to_reserve,
-                                   float text_input_width) {
-    ImGui::SetCursorScreenPos(text_io_start_pos);
-    ImGui::BeginChild("PatternInputBar");
+void Drawer::DrawACTrieTree(ImVec2 canvas_screen_pos, ImVec2 canvas_end_pos) {
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    draw_list->AddRectFilled(canvas_screen_pos, canvas_end_pos,
+                             Palette::AsImU32::kGrayColor);
+    draw_list->AddRect(canvas_screen_pos, canvas_end_pos,
+                       Palette::AsImU32::kWhiteColor);
+}
 
-    if (ImGui::SmallButton("Clear")) {
-        ClearPatternInputLog();
+void Drawer::DrawIOBlocks(ImVec2 io_blocks_start_pos,
+                          ImVec2 end_of_available_space) {
+    float parts_width =
+        (end_of_available_space.x - io_blocks_start_pos.x -
+        end_of_available_space.x * CanvasConstants::kIOBlocksIndentScaleX) / 2;
+    ImGui::SetCursorScreenPos(io_blocks_start_pos);
+    const ImVec2 pattern_block_end_pos(io_blocks_start_pos.x + parts_width,
+                                       end_of_available_space.y);
+    DrawPatternInput(io_blocks_start_pos, pattern_block_end_pos);
+}
+
+void Drawer::DrawPatternInput(ImVec2 io_block_start_pos,
+                              ImVec2 io_block_end_pos) {
+    const ImVec2 io_block_size = io_block_end_pos - io_block_start_pos;
+    ImGui::BeginChild("PatternInputBar", io_block_size);
+
+    if (ImGui::SmallButton("Clear data structure")) {
+        ClearStateAndNotify();
     }
     ImGui::SameLine();
-    bool copy_to_clipboard = ImGui::SmallButton("Copy");
-
+    const bool copy_to_clipboard = ImGui::SmallButton("Copy");
+    const float footer_height_to_reserve =
+        ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
+    const ImVec2 scrolling_region_size(
+        io_block_size.x, io_block_size.y - footer_height_to_reserve * 2);
     ImGui::BeginChild(
-        "ScrollingRegion", ImVec2(0, -footer_height_to_reserve),
-        ImGuiChildFlags_None | ImGuiChildFlags_Border | ImGuiChildFlags_ResizeX,
+        "ScrollingRegion", scrolling_region_size,
+        ImGuiChildFlags_Border,
         ImGuiWindowFlags_HorizontalScrollbar);
 
     if (ImGui::BeginPopupContextWindow()) {
-        if (ImGui::Selectable("Clear")) {
-            ClearPatternInputLog();
+        if (ImGui::Selectable("Clear data structure")) {
+            ClearStateAndNotify();
         }
         ImGui::EndPopup();
     }
@@ -250,8 +260,7 @@ void Drawer::AddPattenInputConsole(ImVec2 text_io_start_pos,
     // ImGui::PopStyleVar();
     // ImGui::Separator();
     ImGui::EndChild();
-
-    bool reclaim_focus = AddPatternTextInput(text_input_width);
+    bool reclaim_focus = AddPatternTextInput(scrolling_region_size.x);
     ImGui::SetItemDefaultFocus();
     // Auto-focus on window apparition
     if (reclaim_focus) {
@@ -261,13 +270,9 @@ void Drawer::AddPattenInputConsole(ImVec2 text_io_start_pos,
     ImGui::EndChild();
 }
 
-void Drawer::AddTextInputConsole(ImVec2 text_io_start_pos,
-                                 float footer_height_to_reserve,
-                                 float text_input_width) {
-    ImGui::SetCursorScreenPos(text_io_start_pos);
-    ImGui::BeginChild("PatternInputBar");
-
-    ImGui::EndChild();
+void Drawer::DrawTextInput(ImVec2 io_blocks_start_pos,
+                           float footer_height_to_reserve) {
+    assert(false);
 }
 
 bool Drawer::AddPatternTextInput(float text_input_width) {
@@ -292,9 +297,11 @@ bool Drawer::AddPatternTextInput(float text_input_width) {
     if (user_added_text) {
         std::string_view pattern =
             patterns_input_history_.TrimSpaces(pattern_input_buffer_.data());
-        patterns_input_history_.AddString(pattern);
-        user_pattern_input_port_.Notify(pattern);
-        pattern_input_buffer_[0] = '\0';
+        if (!pattern.empty()) {
+            patterns_input_history_.AddString(pattern);
+            user_pattern_input_port_.Notify(pattern);
+        }
+        ClearPatternInputBuffer();
     }
     ImGui::PopItemWidth();
     return user_added_text;
@@ -319,6 +326,21 @@ void Drawer::TextEditCallback(ImGuiInputTextCallbackData& data) {
     }
     data.DeleteChars(0, data.BufTextLen);
     data.InsertChars(0, text.begin(), text.end());
+}
+
+void Drawer::ClearStateAndNotify() {
+    events_.clear();
+    model_nodes_.clear();
+    nodes_status_.clear();
+    pattern_input_buffer_.fill('\0');
+    patterns_input_history_.Clear();
+    ClearPatternInputBuffer();
+    actrie_reset_port_.Notify();
+    logger.DebugLog("Cleared actrie");
+}
+
+void Drawer::ClearPatternInputBuffer() noexcept {
+    pattern_input_buffer_[0] = '\0';
 }
 
 }  // namespace AppSpace::GraphicsUtils

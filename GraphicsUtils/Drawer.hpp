@@ -2,8 +2,8 @@
 
 #include <imgui.h>
 
+#include <deque>
 #include <map>
-#include <queue>
 #include <variant>
 
 #include "../App/ACTrie.hpp"
@@ -21,6 +21,7 @@ class Drawer final {
     using UpdatedNodeInfo           = ACTrieModel::UpdatedNodeInfo;
     using PatternObserver           = Observer<Pattern>;
     using TextObserver              = Observer<Text>;
+    using ACTrieResetObserver       = Observer<void, void>;
     using UpdatedNodeInfoPassBy     = ACTrieModel::UpdatedNodeInfoPassBy;
     using FoundSubstringInfoPassBy  = ACTrieModel::FoundSubstringInfoPassBy;
     using BadInputPatternInfoPassBy = ACTrieModel::BadInputPatternInfoPassBy;
@@ -36,6 +37,7 @@ public:
     BadInputPatternObserver* GetBadInputPatternObserverPort() noexcept;
     Drawer& AddPatternSubscriber(PatternObserver* observer);
     Drawer& AddTextSubscriber(TextObserver* observer);
+    Drawer& AddACTrieResetSubscriber(ACTrieResetObserver* observer);
     void OnNewFrame();
 
 private:
@@ -48,17 +50,16 @@ private:
     void HandleFoundSubstring(const FoundSubstringInfo& updated_node_info);
     void HandleBadPatternInput(const BadInputPatternInfo& updated_node_info);
     void Draw();
-    void AddPattenInputConsole(ImVec2 text_io_start_pos,
-                               float footer_height_to_reserve,
-                               float text_input_width);
-    void AddTextInputConsole(ImVec2 text_io_start_pos,
-                             float footer_height_to_reserve,
-                             float text_input_width);
+    void DrawACTrieTree(ImVec2 canvas_screen_pos, ImVec2 canvas_end_pos);
+    void DrawIOBlocks(ImVec2 io_blocks_start_pos,
+                      ImVec2 end_of_available_space);
+    void DrawPatternInput(ImVec2 io_block_start_pos, ImVec2 io_block_end_pos);
+    void DrawTextInput(ImVec2 text_io_start_pos,
+                       float footer_height_to_reserve);
     bool AddPatternTextInput(float text_input_width);
     void TextEditCallback(ImGuiInputTextCallbackData& data);
-    void ClearPatternInputLog() {
-        patterns_input_history_.Clear();
-    }
+    void ClearStateAndNotify();
+    void ClearPatternInputBuffer() noexcept;
 
     struct Palette final {
         struct AsImU32 final {
@@ -84,6 +85,7 @@ private:
         static constexpr float kTreeDrawingCanvasScaleY       = 0.95f;
         static constexpr float kTreeDrawingCanvasIndentScaleX = 0.005f;
         static constexpr float kPatternInputFieldWidthScaleX  = 0.1f;
+        static constexpr float kIOBlocksIndentScaleX          = 0.005f;
     };
 
     enum class NodeStatus {
@@ -116,11 +118,10 @@ private:
     BadInputPatternObserver bad_input_port_;
     Observable<Pattern> user_pattern_input_port_;
     Observable<Text> user_text_input_port_;
-    Observable<void, void> clear_signal_port_;
-    std::queue<EventType> events_;
+    Observable<void, void> actrie_reset_port_;
+    std::deque<EventType> events_;
     std::vector<ACTrieModel::ACTNode> model_nodes_;
-    std::map<ACTrieModel::VertexIndex, NodeState> node_status_;
-
+    std::map<ACTrieModel::VertexIndex, NodeState> nodes_status_;
     static constexpr std::size_t kPatternInputBufferSize = 64;
     std::array<char, kPatternInputBufferSize> pattern_input_buffer_{'\0'};
     DrawerUtils::StringHistoryManager patterns_input_history_;

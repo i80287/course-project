@@ -12,9 +12,9 @@ public:
                       std::source_location::current()) const
         noexcept(!kIsDebugLogEnabled) {
         if constexpr (kIsDebugLogEnabled) {
-            std::clog << "[DEBUG] [Message: '" << msg << "'] [from: file "
-                      << location.file_name() << ", line " << location.line()
-                      << ':' << location.column() << ' '
+            std::clog << "[DEBUG] [Message: '" << msg
+                      << "'] [source: " << location.file_name() << ", line "
+                      << location.line() << ':' << location.column() << "] ["
                       << location.function_name() << ']' << std::endl;
         }
     }

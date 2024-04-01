@@ -17,7 +17,11 @@ ACTrie::ACTrie() {
 }
 
 ACTrie& ACTrie::AddPattern(std::string_view pattern) {
-    if (!notified_about_initial_nodes_ || is_ready_) {
+    assert(!is_ready_ || notified_about_initial_nodes_);
+    if (!notified_about_initial_nodes_) {
+        NotifyAboutInitialNodes();
+    }
+    if (is_ready_) {
         ResetACTrie();
     }
 
@@ -88,18 +92,19 @@ ACTrie& ACTrie::FindAllSubstringsInText(std::string_view text) {
 }
 
 ACTrie& ACTrie::ResetACTrie() {
+    is_ready_                     = false;
+    notified_about_initial_nodes_ = false;
     nodes_.clear();
     words_lengths_.clear();
     nodes_.resize(kInitialNodesCount);
     nodes_[kFakePreRootIndex].edges.fill(kRootIndex);
-    is_ready_                     = false;
-    notified_about_initial_nodes_ = false;
     NotifyAboutInitialNodes();
     return *this;
 }
 
 ACTrie& ACTrie::AddSubscriber(UpdatedNodeObserver* observer) {
     updated_nodes_port_.Subscribe(observer);
+    NotifyAboutInitialNodes();
     return *this;
 }
 
@@ -153,10 +158,10 @@ ACTrie::VertexIndex ACTrie::SymbolToIndex(char symbol) noexcept {
 }
 
 ACTrie& ACTrie::ComputeLinksForNodes() {
-    if (!notified_about_initial_nodes_) {
-        ResetACTrie();
-    }
     assert(!is_ready_);
+    if (!notified_about_initial_nodes_) {
+        NotifyAboutInitialNodes();
+    }
     nodes_[kRootIndex].suffix_link            = kFakePreRootIndex;
     nodes_[kRootIndex].compressed_suffix_link = kRootIndex;
     NotifyAboutComputedSuffixLinks(kRootIndex, kFakePreRootIndex, '\0');
