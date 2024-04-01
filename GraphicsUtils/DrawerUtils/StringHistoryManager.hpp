@@ -14,8 +14,14 @@ public:
         history_.emplace_back(std::forward<StrType>(str));
         current_history_position_ = kInitialPosition;
     }
-    constexpr bool Empty() const noexcept {
-        return history_.empty();
+    std::string_view Last() const noexcept;
+    void PopLast() noexcept;
+    constexpr bool Empty() const noexcept;
+    std::string MoveAndPopLast() noexcept {
+        assert(!Empty());
+        std::string last_elem(std::move(history_.back()));
+        history_.pop_back();
+        return last_elem;
     }
     auto begin() const noexcept {
         return history_.begin();
@@ -40,5 +46,9 @@ private:
     static constexpr Index kInitialPosition = static_cast<Index>(-1);
     Index current_history_position_         = kInitialPosition;
 };
+
+constexpr bool StringHistoryManager::Empty() const noexcept {
+    return history_.empty();
+}
 
 }  // namespace AppSpace::GraphicsUtils::DrawerUtils

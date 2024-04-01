@@ -4,6 +4,16 @@
 
 namespace AppSpace::GraphicsUtils::DrawerUtils {
 
+std::string_view StringHistoryManager::Last() const noexcept {
+    assert(!Empty());
+    return history_.back();
+}
+
+void StringHistoryManager::PopLast() noexcept {
+    assert(!Empty());
+    history_.pop_back();
+}
+
 std::string_view StringHistoryManager::MoveToPreviousInputAndRead() noexcept {
     assert(!Empty());
     current_history_position_--;
@@ -12,6 +22,7 @@ std::string_view StringHistoryManager::MoveToPreviousInputAndRead() noexcept {
     }
     return history_[current_history_position_];
 }
+
 std::string_view StringHistoryManager::MoveToNextInputAndRead() noexcept {
     assert(!Empty());
     current_history_position_++;

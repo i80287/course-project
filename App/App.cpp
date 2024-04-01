@@ -9,7 +9,9 @@ App::App() : model_controller_(model_) {
     view_.AddPatternSubscriber(model_controller_.GetPatternObserverPort())
         .AddTextSubscriber(model_controller_.GetTextObserverPort())
         .AddACTrieResetSubscriber(
-            model_controller_.GetACTrieResetObserverPort());
+            model_controller_.GetACTrieResetObserverPort())
+        .AddACTrieBuildSubscriber(
+            model_controller_.GetACTrieBuildObserverPort());
 }
 
 void App::Run() {

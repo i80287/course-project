@@ -100,8 +100,9 @@ public:
 
     ACTrie();
     ACTrie& AddPattern(Pattern pattern);
-    ACTrie& FindAllSubstringsInText(Text text);
+    ACTrie& BuildACTrie();
     ACTrie& ResetACTrie();
+    ACTrie& FindAllSubstringsInText(Text text);
     ACTrie& AddSubscriber(UpdatedNodeObserver* observer);
     ACTrie& AddSubscriber(FoundSubstringObserver* observer);
     ACTrie& AddSubscriber(BadInputPatternObserver* observer);
@@ -117,7 +118,6 @@ private:
                                           std::size_t position_in_text,
                                           std::string_view text);
     static VertexIndex SymbolToIndex(char symbol) noexcept;
-    ACTrie& ComputeLinksForNodes();
     void ComputeLinksForNodeChildren(VertexIndex node_index,
                                      std::queue<VertexIndex>& queue);
     bool IsACTrieInCorrectState() const;

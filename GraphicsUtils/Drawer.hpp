@@ -22,6 +22,7 @@ class Drawer final {
     using PatternObserver           = Observer<Pattern>;
     using TextObserver              = Observer<Text>;
     using ACTrieResetObserver       = Observer<void, void>;
+    using ACTrieBuildObserver       = Observer<void, void>;
     using UpdatedNodeInfoPassBy     = ACTrieModel::UpdatedNodeInfoPassBy;
     using FoundSubstringInfoPassBy  = ACTrieModel::FoundSubstringInfoPassBy;
     using BadInputPatternInfoPassBy = ACTrieModel::BadInputPatternInfoPassBy;
@@ -38,6 +39,7 @@ public:
     Drawer& AddPatternSubscriber(PatternObserver* observer);
     Drawer& AddTextSubscriber(TextObserver* observer);
     Drawer& AddACTrieResetSubscriber(ACTrieResetObserver* observer);
+    Drawer& AddACTrieBuildSubscriber(ACTrieBuildObserver* observer);
     void OnNewFrame();
 
 private:
@@ -55,12 +57,14 @@ private:
     void DrawPatternInputBlock(ImVec2 block_start_pos, ImVec2 block_end_pos);
     void DrawFoundWordsBlock(ImVec2 block_start_pos, ImVec2 block_end_pos);
     void DrawTextInputBlock(ImVec2 block_start_pos, ImVec2 block_end_pos);
+    void DrawBadSymbolWindow();
     bool AddPatternInput(float text_input_width);
     bool AddTextInput(float text_input_width);
     void PatternInputImGuiCallback(ImGuiInputTextCallbackData& data);
     void TextInputImGuiCallback(ImGuiInputTextCallbackData& data);
     void ClearStateAndNotify();
-    void ClearInputBuffer() noexcept;
+    void ClearPatternInputBuffer() noexcept;
+    void ClearTextInputBuffer() noexcept;
     static std::string_view TrimSpaces(std::string_view str) noexcept;
 
     struct Palette final {
@@ -93,6 +97,7 @@ private:
         static constexpr float kTextInputHeightScaleY         = 0.05f;
         static constexpr float kTextInputIndentScaleY         = 0.005f;
         static constexpr float kButtonDecreaseScale           = 2.0f;
+        static constexpr float kTextInputBoxWithScaleX        = 0.7f;
         static constexpr int kNumberOfIOBlocks                = 2;
 
         static_assert(kTreeDrawingCanvasScaleX +
@@ -132,21 +137,30 @@ private:
     Observable<Pattern> user_pattern_input_port_;
     Observable<Text> user_text_input_port_;
     Observable<void, void> actrie_reset_port_;
+    Observable<void, void> actrie_build_port_;
     std::deque<EventType> events_;
     std::vector<ACTrieModel::ACTNode> model_nodes_;
     std::map<ACTrieModel::VertexIndex, NodeState> nodes_status_;
     DrawerUtils::StringHistoryManager patterns_input_history_;
     DrawerUtils::StringHistoryManager texts_input_history_;
     std::vector<std::string> found_words_;
-    bool is_no_resize_                                   = false;
-    bool is_no_decoration_                               = false;
-    bool is_window_rounding_disabled_                    = false;
-    bool is_scroll_to_bottom_                            = false;
-    bool is_auto_scroll_                                 = false;
-    bool is_inputing_text_                               = false;
-    bool is_clear_button_pressed_                        = false;
-    static constexpr std::size_t kPatternInputBufferSize = 512;
-    std::array<char, kPatternInputBufferSize> input_buffer_{'\0'};
+    bool is_no_resize_                = false;
+    bool is_no_decoration_            = false;
+    bool is_window_rounding_disabled_ = false;
+    bool is_scroll_to_bottom_         = false;
+    bool is_auto_scroll_              = false;
+    bool is_inputing_text_            = false;
+    bool is_clear_button_pressed_     = false;
+    bool is_bad_symbol_found_         = false;
+    bool bad_symbol_modal_opened_     = false;
+    std::string bad_pattern_;
+    std::size_t bad_symbol_position_                     = 0;
+    char bad_symbol_                                     = '\0';
+    static constexpr std::size_t kPatternInputBufferSize = 64;
+    std::string pattern_input_buffer_ =
+        std::string(kPatternInputBufferSize, '\0');
+    static constexpr std::size_t kTextInputBufferSize = 1024;
+    std::string text_input_buffer_ = std::string(kTextInputBufferSize, '\0');
 };
 
 }  // namespace AppSpace::GraphicsUtils

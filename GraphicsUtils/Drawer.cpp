@@ -63,6 +63,11 @@ Drawer& Drawer::AddACTrieResetSubscriber(ACTrieResetObserver* observer) {
     return *this;
 }
 
+Drawer& Drawer::AddACTrieBuildSubscriber(ACTrieBuildObserver* observer) {
+    actrie_build_port_.Subscribe(observer);
+    return *this;
+}
+
 void Drawer::OnNewFrame() {
     HandleNextEvent();
     Draw();
@@ -143,13 +148,17 @@ void Drawer::HandleNodeUpdate(const UpdatedNodeInfo& updated_node_info) {
     }
 }
 
-void Drawer::HandleFoundSubstring(const FoundSubstringInfo& updated_node_info) {
-    printf("Substring found:\n");
+void Drawer::HandleFoundSubstring(
+    const FoundSubstringInfo& found_substring_info) {
+    logger.DebugLog("Found substring: ", found_substring_info.found_substring);
+    found_words_.emplace_back(std::move(found_substring_info.found_substring));
 }
 
-void Drawer::HandleBadPatternInput(
-    const BadInputPatternInfo& updated_node_info) {
-    printf("Bad symbol '%c'\n", updated_node_info.bad_symbol);
+void Drawer::HandleBadPatternInput(const BadInputPatternInfo& bad_symbol_info) {
+    is_bad_symbol_found_ = true;
+    bad_symbol_position_ = bad_symbol_info.symbol_index;
+    bad_symbol_          = bad_symbol_info.bad_symbol;
+    logger.DebugLog("Bad symbol: '", "'", bad_symbol_info.bad_symbol);
 }
 
 void Drawer::Draw() {
@@ -195,11 +204,14 @@ void Drawer::Draw() {
     DrawTextInputBlock(text_input_start_pos, text_input_end_pos);
     DrawIOBlocks(io_blocks_start_pos, io_blocks_end_pos);
 
+    if (is_bad_symbol_found_ || bad_symbol_modal_opened_) {
+        DrawBadSymbolWindow();
+    }
+
     ImGui::End();
     if (is_window_rounding_disabled_) {
         ImGui::PopStyleVar(1);
     }
-
     if (is_clear_button_pressed_) {
         ClearStateAndNotify();
         is_clear_button_pressed_ = false;
@@ -284,13 +296,15 @@ void Drawer::DrawPatternInputBlock(ImVec2 block_start_pos,
     // ImGui::PopStyleVar();
     // ImGui::Separator();
     ImGui::EndChild();
-    bool reclaim_focus =
-        AddPatternInput(scrolling_region_size.x *
-                        CanvasConstants::kPatternInputFieldWidthScaleX);
-    ImGui::SetItemDefaultFocus();
-    // Auto-focus on window apparition
-    if (reclaim_focus) {
-        ImGui::SetKeyboardFocusHere(-1);
+    if (!is_inputing_text_) {
+        bool reclaim_focus =
+            AddPatternInput(scrolling_region_size.x *
+                            CanvasConstants::kPatternInputFieldWidthScaleX);
+        ImGui::SetItemDefaultFocus();
+        // Auto-focus on window apparition
+        if (reclaim_focus) {
+            ImGui::SetKeyboardFocusHere(-1);
+        }
     }
 
     ImGui::EndChild();
@@ -326,7 +340,10 @@ void Drawer::DrawFoundWordsBlock(ImVec2 block_start_pos, ImVec2 block_end_pos) {
 void Drawer::DrawTextInputBlock(ImVec2 block_start_pos, ImVec2 block_end_pos) {
     ImGui::SetCursorScreenPos(block_start_pos);
     if (is_inputing_text_) {
-        bool reclaim_focus = AddTextInput(block_end_pos.x - block_start_pos.x);
+        const float text_input_box_width =
+            (block_end_pos.x - block_start_pos.x) *
+            CanvasConstants::kTextInputBoxWithScaleX;
+        bool reclaim_focus = AddTextInput(text_input_box_width);
         ImGui::SetItemDefaultFocus();
         // Auto-focus on window apparition
         if (reclaim_focus) {
@@ -335,11 +352,31 @@ void Drawer::DrawTextInputBlock(ImVec2 block_start_pos, ImVec2 block_end_pos) {
     } else {
         const ImVec2 button_size = (block_end_pos - block_start_pos) /
                                    CanvasConstants::kButtonDecreaseScale;
-        is_inputing_text_ |= ImGui::Button("Build AC trie", button_size);
+        is_inputing_text_ = ImGui::Button("Build AC trie", button_size);
         if (is_inputing_text_) {
+            actrie_build_port_.Notify();
             logger.DebugLog("User built AC trie");
         }
     }
+}
+
+void Drawer::DrawBadSymbolWindow() {
+    constexpr const char* kBadSymbolModalName = "Incorrect input";
+    ImGui::OpenPopup(kBadSymbolModalName);
+    ImGui::BeginPopupModal(kBadSymbolModalName);
+    bad_symbol_modal_opened_ = true;
+    if (is_bad_symbol_found_) {
+        bad_pattern_ = patterns_input_history_.MoveAndPopLast();
+    }
+    ImGui::Text(
+        "Incorrect symbol '%c' passed in the pattern %s at position %zu",
+        bad_symbol_, bad_pattern_.c_str(), bad_symbol_position_);
+    if (ImGui::Button("Close")) {
+        bad_symbol_modal_opened_ = false;
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+    is_bad_symbol_found_ = false;
 }
 
 bool Drawer::AddPatternInput(float text_input_width) {
@@ -350,8 +387,8 @@ bool Drawer::AddPatternInput(float text_input_width) {
 
     ImGui::PushItemWidth(text_input_width);
     bool user_added_text = ImGui::InputText(
-        "Pattern input", input_buffer_.data(), input_buffer_.size(),
-        input_text_flags,
+        "Pattern input", pattern_input_buffer_.data(),
+        pattern_input_buffer_.size(), input_text_flags,
         [](ImGuiInputTextCallbackData* data) {
             assert(data);
             Drawer* this_drawer = static_cast<Drawer*>(data->UserData);
@@ -361,13 +398,13 @@ bool Drawer::AddPatternInput(float text_input_width) {
         },
         reinterpret_cast<void*>(this));
     if (user_added_text) {
-        std::string_view pattern = TrimSpaces(input_buffer_.data());
+        std::string_view pattern = TrimSpaces(pattern_input_buffer_.data());
         if (!pattern.empty()) {
             patterns_input_history_.AddString(pattern);
             user_pattern_input_port_.Notify(pattern);
             logger.DebugLog("User added string: ", pattern);
         }
-        ClearInputBuffer();
+        ClearPatternInputBuffer();
     }
     ImGui::PopItemWidth();
     return user_added_text;
@@ -381,7 +418,7 @@ bool Drawer::AddTextInput(float text_input_width) {
 
     ImGui::PushItemWidth(text_input_width);
     bool user_added_text = ImGui::InputText(
-        "Text input", input_buffer_.data(), input_buffer_.size(),
+        "Text input", text_input_buffer_.data(), text_input_buffer_.size(),
         input_text_flags,
         [](ImGuiInputTextCallbackData* data) {
             assert(data);
@@ -392,12 +429,13 @@ bool Drawer::AddTextInput(float text_input_width) {
         },
         reinterpret_cast<void*>(this));
     if (user_added_text) {
-        std::string_view input_text = TrimSpaces(input_buffer_.data());
+        std::string_view input_text = TrimSpaces(text_input_buffer_.data());
         if (!input_text.empty()) {
+            texts_input_history_.AddString(input_text);
             user_text_input_port_.Notify(input_text);
             logger.DebugLog("User requested a search in text: ", input_text);
         }
-        ClearInputBuffer();
+        ClearTextInputBuffer();
     }
     ImGui::PopItemWidth();
     return user_added_text;
@@ -422,9 +460,11 @@ void Drawer::PatternInputImGuiCallback(ImGuiInputTextCallbackData& data) {
     }
     data.DeleteChars(0, data.BufTextLen);
     data.InsertChars(0, text.begin(), text.end());
+    logger.DebugLog("Updated pattern input box");
 }
 
 void Drawer::TextInputImGuiCallback(ImGuiInputTextCallbackData& data) {
+    logger.DebugLog("TEST");
     if (data.EventFlag != ImGuiInputTextFlags_CallbackHistory ||
         texts_input_history_.Empty()) {
         return;
@@ -443,24 +483,30 @@ void Drawer::TextInputImGuiCallback(ImGuiInputTextCallbackData& data) {
     }
     data.DeleteChars(0, data.BufTextLen);
     data.InsertChars(0, text.begin(), text.end());
+    logger.DebugLog("Updated text input box");
 }
 
 void Drawer::ClearStateAndNotify() {
     is_inputing_text_        = false;
     is_clear_button_pressed_ = false;
+    is_bad_symbol_found_     = false;
     events_.clear();
     model_nodes_.clear();
     nodes_status_.clear();
     patterns_input_history_.Clear();
     texts_input_history_.Clear();
     found_words_.clear();
-    ClearInputBuffer();
+    ClearPatternInputBuffer();
     actrie_reset_port_.Notify();
     logger.DebugLog("Cleared actrie");
 }
 
-void Drawer::ClearInputBuffer() noexcept {
-    input_buffer_[0] = '\0';
+void Drawer::ClearPatternInputBuffer() noexcept {
+    pattern_input_buffer_[0] = '\0';
+}
+
+void Drawer::ClearTextInputBuffer() noexcept {
+    text_input_buffer_[0] = '\0';
 }
 
 std::string_view Drawer::TrimSpaces(std::string_view str) noexcept {
