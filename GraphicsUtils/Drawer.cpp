@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "DrawerUtils/StaticLogger.hpp"
 #include "ImGuiExtensions.hpp"
 #include "ImGuiFacade.hpp"
 
@@ -27,6 +28,7 @@ Drawer::Drawer()
               std::forward<BadInputPatternInfoPassBy>(bad_input_info));
       }) {
     SetupImGuiStyle();
+    model_nodes_.reserve(ACTrieModel::kInitialNodesCount);
 }
 
 Drawer::UpdatedNodeObserver* Drawer::GetUpdatedNodeObserverPort() noexcept {
@@ -97,7 +99,36 @@ void Drawer::OnBadPatternInput(BadInputPatternInfoPassBy bad_input_info) {
 }
 
 void Drawer::HandleNodeUpdate(const UpdatedNodeInfo& updated_node_info) {
-    printf("Node Updated:\n");
+    const auto node_index        = updated_node_info.node_index;
+    const auto node_parent_index = updated_node_info.node_parent_index;
+    if (node_index != ACTrieModel::kNullNodeIndex) {
+        assert(node_parent_index < node_index);
+        // TODO: check this assert
+        // assert(node_parent_index < model_nodes_.size());
+    }
+
+    switch (updated_node_info.status) {
+        case ACTrieModel::UpdatedNodeStatus::kAdded:
+            model_nodes_.emplace_back(updated_node_info.node);
+            assert(node_index == model_nodes_.size() - 1);
+            node_status_.emplace(
+                updated_node_info.node_index,
+                NodeState{
+                    .node_index        = node_index,
+                    .node_parent_index = node_parent_index,
+                    .status            = NodeStatus::kAdded,
+                    .parent_to_node_edge_symbol =
+                        updated_node_info.parent_to_node_edge_symbol,
+                });
+            StaticLogger::DebugLog("Added new node\n");
+            break;
+        case ACTrieModel::UpdatedNodeStatus::kSuffixLinksComputed:
+            StaticLogger::DebugLog("Added new node\n");
+            break;
+        default:
+            assert(false);
+            break;
+    }
 }
 
 void Drawer::HandleFoundSubstring(const FoundSubstringInfo& updated_node_info) {

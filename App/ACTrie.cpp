@@ -95,8 +95,8 @@ ACTrie& ACTrie::ResetACTrie() {
     nodes_[kFakePreRootIndex].edges.fill(kRootIndex);
     is_ready_ = false;
 
-    // We don't notify about fake preroot node
-    //  because it should not be shown to the user.
+    NotifyAboutAddedNode(kNullNodeIndex, kNullNodeIndex, '\0');
+    NotifyAboutAddedNode(kFakePreRootIndex, kNullNodeIndex, '\0');
     NotifyAboutAddedNode(kRootIndex, kFakePreRootIndex, '\0');
     return *this;
 }

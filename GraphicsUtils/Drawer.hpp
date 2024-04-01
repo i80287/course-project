@@ -64,7 +64,7 @@ private:
             static constexpr ImU32 kWhiteColor = IM_COL32_WHITE;
         };
 
-        // ImColor as actually a vector of 4 floats.
+        // ImColor is actually a vector of 4 floats.
         struct AsImColor final {
             static constexpr ImColor kGrayColor = ImColor(AsImU32::kGrayColor);
             static constexpr ImColor kRedColor  = ImColor(AsImU32::kRedColor);
@@ -88,6 +88,12 @@ private:
         kSuffixLinksComputed,
         kFoundSubstringInThisNode,
     };
+    struct NodeState final {
+        ACTrieModel::VertexIndex node_index;
+        ACTrieModel::VertexIndex node_parent_index;
+        NodeStatus status;
+        char parent_to_node_edge_symbol;
+    };
 
     using EventType =
         std::variant<UpdatedNodeInfo, FoundSubstringInfo, BadInputPatternInfo>;
@@ -109,7 +115,7 @@ private:
     Observable<Text> user_text_input_port_;
     std::queue<EventType> events_;
     std::vector<ACTrieModel::ACTNode> model_nodes_;
-    std::map<ACTrieModel::VertexIndex, NodeStatus> node_status_;
+    std::map<ACTrieModel::VertexIndex, NodeState> node_status_;
 
     static constexpr std::size_t kPatternInputBufferSize = 64;
     std::array<char, kPatternInputBufferSize> pattern_input_buffer_{'\0'};
