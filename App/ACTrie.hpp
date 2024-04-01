@@ -129,10 +129,12 @@ private:
     void NotifyAboutComputedSuffixLinks(VertexIndex node_index,
                                         VertexIndex node_parent_index,
                                         char parent_to_node_edge_symbol);
+    void NotifyAboutInitialNodes();
 
     std::vector<ACTNode> nodes_;
     std::vector<WordLength> words_lengths_;
-    bool is_ready_ = false;
+    bool is_ready_                     = false;
+    bool notified_about_initial_nodes_ = false;
     Observable<UpdatedNodeInfo, UpdatedNodeInfoPassBy> updated_nodes_port_;
     Observable<FoundSubstringInfo, FoundSubstringInfoPassBy>
         found_substrings_port_;

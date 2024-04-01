@@ -9,11 +9,13 @@
 #include <string>
 #include <vector>
 
-#include "DrawerUtils/StaticLogger.hpp"
+#include "DrawerUtils/Logger.hpp"
 #include "ImGuiExtensions.hpp"
 #include "ImGuiFacade.hpp"
 
 namespace AppSpace::GraphicsUtils {
+
+using DrawerUtils::logger;
 
 Drawer::Drawer()
     : updated_node_port_([this](UpdatedNodeInfoPassBy updated_node_info) {
@@ -103,8 +105,7 @@ void Drawer::HandleNodeUpdate(const UpdatedNodeInfo& updated_node_info) {
     const auto node_parent_index = updated_node_info.node_parent_index;
     if (node_index != ACTrieModel::kNullNodeIndex) {
         assert(node_parent_index < node_index);
-        // TODO: check this assert
-        // assert(node_parent_index < model_nodes_.size());
+        assert(node_parent_index < model_nodes_.size());
     }
 
     switch (updated_node_info.status) {
@@ -120,10 +121,10 @@ void Drawer::HandleNodeUpdate(const UpdatedNodeInfo& updated_node_info) {
                     .parent_to_node_edge_symbol =
                         updated_node_info.parent_to_node_edge_symbol,
                 });
-            StaticLogger::DebugLog("Added new node\n");
+            logger.DebugLog("Added new node");
             break;
         case ACTrieModel::UpdatedNodeStatus::kSuffixLinksComputed:
-            StaticLogger::DebugLog("Added new node\n");
+            logger.DebugLog("Added new node");
             break;
         default:
             assert(false);

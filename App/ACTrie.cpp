@@ -14,11 +14,12 @@ ACTrie::ACTrie()
     : pattern_in_port_([this](Pattern pattern) { AddPattern(pattern); }),
       text_in_port_([this](Text text) { FindAllSubstringsInText(text); }) {
     nodes_.reserve(kDefaultNodesCapacity);
-    ResetACTrie();
+    nodes_.resize(kInitialNodesCount);
+    nodes_[kFakePreRootIndex].edges.fill(kRootIndex);
 }
 
 ACTrie& ACTrie::AddPattern(std::string_view pattern) {
-    if (IsReady()) {
+    if (!notified_about_initial_nodes_ || is_ready_) {
         ResetACTrie();
     }
 
@@ -63,7 +64,7 @@ ACTrie& ACTrie::AddPattern(std::string_view pattern) {
 }
 
 ACTrie& ACTrie::FindAllSubstringsInText(std::string_view text) {
-    if (!IsReady()) {
+    if (!is_ready_) {
         ComputeLinksForNodes().is_ready_ = true;
         assert(IsACTrieInCorrectState());
     }
@@ -93,11 +94,9 @@ ACTrie& ACTrie::ResetACTrie() {
     words_lengths_.clear();
     nodes_.resize(kInitialNodesCount);
     nodes_[kFakePreRootIndex].edges.fill(kRootIndex);
-    is_ready_ = false;
-
-    NotifyAboutAddedNode(kNullNodeIndex, kNullNodeIndex, '\0');
-    NotifyAboutAddedNode(kFakePreRootIndex, kNullNodeIndex, '\0');
-    NotifyAboutAddedNode(kRootIndex, kFakePreRootIndex, '\0');
+    is_ready_                     = false;
+    notified_about_initial_nodes_ = false;
+    NotifyAboutInitialNodes();
     return *this;
 }
 
@@ -156,6 +155,10 @@ ACTrie::VertexIndex ACTrie::SymbolToIndex(char symbol) noexcept {
 }
 
 ACTrie& ACTrie::ComputeLinksForNodes() {
+    if (!notified_about_initial_nodes_) {
+        ResetACTrie();
+    }
+    assert(!is_ready_);
     nodes_[kRootIndex].suffix_link            = kFakePreRootIndex;
     nodes_[kRootIndex].compressed_suffix_link = kRootIndex;
     NotifyAboutComputedSuffixLinks(kRootIndex, kFakePreRootIndex, '\0');
@@ -264,6 +267,14 @@ void ACTrie::NotifyAboutComputedSuffixLinks(VertexIndex node_index,
         .status                     = UpdatedNodeStatus::kSuffixLinksComputed,
         .parent_to_node_edge_symbol = parent_to_node_edge_symbol,
     });
+}
+
+void ACTrie::NotifyAboutInitialNodes() {
+    assert(!notified_about_initial_nodes_);
+    NotifyAboutAddedNode(kNullNodeIndex, kNullNodeIndex, '\0');
+    NotifyAboutAddedNode(kFakePreRootIndex, kNullNodeIndex, '\0');
+    NotifyAboutAddedNode(kRootIndex, kFakePreRootIndex, '\0');
+    notified_about_initial_nodes_ = true;
 }
 
 }  // namespace AppSpace::ACTrieDS
