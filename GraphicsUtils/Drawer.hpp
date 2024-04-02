@@ -136,7 +136,7 @@ private:
         char parent_to_node_edge_symbol;
         ImVec2 coordinates;
     };
-    // same as UpdatedNodeInfo but with copied node
+    // same as ACTrie::UpdatedNodeInfo but with copied node.
     struct CopiedUpdatedNodeInfo final {
         VertexIndex node_index;
         VertexIndex parent_node_index;
@@ -144,8 +144,16 @@ private:
         ACTrieModel::UpdatedNodeStatus status;
         char parent_to_node_edge_symbol;
     };
-    using EventType = std::variant<CopiedUpdatedNodeInfo, FoundSubstringInfo,
-                                   BadInputPatternInfo, PassingThroughInfo>;
+    // same as ACTrie::FoundSubstringInfo but with string_view copied into
+    // string.
+    struct CopiedFoundSubstringInfo final {
+        std::string found_substring;
+        std::size_t substring_start_index;
+        VertexIndex current_vertex_index;
+    };
+    using EventType =
+        std::variant<CopiedUpdatedNodeInfo, CopiedFoundSubstringInfo,
+                     BadInputPatternInfo, PassingThroughInfo>;
     // We use enum instead of enum class because
     //  this constants are used to identify type
     //  according to std::variant<...>::index()
@@ -169,7 +177,7 @@ private:
     void OnBadPatternInput(BadInputPatternInfoPassBy bad_input_info);
     void OnPassingThrough(PassingThroughInfoPassBy passing_info);
     void HandleNodeUpdate(const CopiedUpdatedNodeInfo& updated_node_info);
-    void HandleFoundSubstring(FoundSubstringInfoPassBy updated_node_info);
+    void HandleFoundSubstring(CopiedFoundSubstringInfo&& found_substring_info);
     void HandleBadPatternInput(BadInputPatternInfoPassBy updated_node_info);
     void HandlePassingThrough(PassingThroughInfo passing_info);
     void Draw();

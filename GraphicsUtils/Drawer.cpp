@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <numbers>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -94,15 +95,15 @@ void Drawer::HandleNextEvent() {
             return;
         }
         time_since_last_event_handled_ = time_now;
-        EventType event = std::move(events_.front());
+        EventType event                = std::move(events_.front());
         events_.pop_front();
         switch (event.index()) {
             case kUpdateNodeEventIndex:
                 HandleNodeUpdate(std::get<kUpdateNodeEventIndex>(event));
                 break;
             case kFoundSubstringEventIndex:
-                HandleFoundSubstring(std::forward<FoundSubstringInfoPassBy>(
-                    std::get<kFoundSubstringEventIndex>(event)));
+                HandleFoundSubstring(
+                    std::move(std::get<kFoundSubstringEventIndex>(event)));
                 break;
             case kBadInputPatternEventIndex:
                 HandleBadPatternInput(std::forward<BadInputPatternInfoPassBy>(
@@ -135,7 +136,10 @@ void Drawer::OnUpdatedNode(UpdatedNodeInfoPassBy updated_node_info) {
 }
 
 void Drawer::OnFoundSubstring(FoundSubstringInfoPassBy substring_info) {
-    events_.emplace_back(std::forward<FoundSubstringInfo>(substring_info));
+    events_.emplace_back(CopiedFoundSubstringInfo{
+        .found_substring       = std::string(substring_info.found_substring),
+        .substring_start_index = substring_info.substring_start_index,
+        .current_vertex_index  = substring_info.current_vertex_index});
 }
 
 void Drawer::OnBadPatternInput(BadInputPatternInfoPassBy bad_input_info) {
@@ -197,7 +201,7 @@ void Drawer::HandleNodeUpdate(const CopiedUpdatedNodeInfo& updated_node_info) {
 }
 
 void Drawer::HandleFoundSubstring(
-    FoundSubstringInfoPassBy found_substring_info) {
+    CopiedFoundSubstringInfo&& found_substring_info) {
     logger.DebugLog("Found substring: ", found_substring_info.found_substring);
 
     std::string str = std::move(found_substring_info.found_substring);
