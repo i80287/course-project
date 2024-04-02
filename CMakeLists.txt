@@ -71,7 +71,6 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         -fstack-protector-all
         -Wall
         -Wextra
-        -Wfloat-equal
         -Wlogical-op
         -Wcast-qual
         -Wpedantic
@@ -88,7 +87,8 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         -Wmissing-noreturn
         -Wunreachable-code
         -Wcast-align
-        -Warray-bounds
+        -Warray-bounds=2
+        -Wformat=2
     )
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
 
