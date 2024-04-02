@@ -78,7 +78,7 @@ public:
         char parent_to_node_edge_symbol;
     };
     struct FoundSubstringInfo {
-        std::string found_substring;
+        std::string_view found_substring;
         std::size_t substring_start_index;
         VertexIndex current_vertex_index;
     };
@@ -86,10 +86,9 @@ public:
         std::size_t symbol_index;
         char bad_symbol;
     };
-    using PassingThroughInfo    = VertexIndex;
-    using UpdatedNodeInfoPassBy = UpdatedNodeInfo;
-    using FoundSubstringInfoPassBy =
-        std::add_rvalue_reference_t<FoundSubstringInfo>;
+    using PassingThroughInfo        = VertexIndex;
+    using UpdatedNodeInfoPassBy     = UpdatedNodeInfo;
+    using FoundSubstringInfoPassBy  = FoundSubstringInfo;
     using BadInputPatternInfoPassBy = BadInputPatternInfo;
     using PassingThroughInfoPassBy  = PassingThroughInfo;
     using UpdatedNodeObserver =
