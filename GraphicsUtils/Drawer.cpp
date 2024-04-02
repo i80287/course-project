@@ -4,10 +4,13 @@
 
 #include <cassert>
 #include <cctype>
+#include <climits>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "DrawerUtils/Logger.hpp"
@@ -20,32 +23,41 @@ using DrawerUtils::logger;
 using namespace ImGuiExtensions;
 
 Drawer::Drawer()
-    : updated_node_port_([this](UpdatedNodeInfoPassBy updated_node_info) {
+    : updated_node_in_port_([this](UpdatedNodeInfoPassBy updated_node_info) {
           OnUpdatedNode(std::forward<UpdatedNodeInfoPassBy>(updated_node_info));
       }),
-      found_string_port_([this](FoundSubstringInfoPassBy substring_info) {
+      found_substring_in_port_([this](FoundSubstringInfoPassBy substring_info) {
           OnFoundSubstring(
               std::forward<FoundSubstringInfoPassBy>(substring_info));
       }),
-      bad_input_port_([this](BadInputPatternInfoPassBy bad_input_info) {
+      bad_input_in_port_([this](BadInputPatternInfoPassBy bad_input_info) {
           OnBadPatternInput(
               std::forward<BadInputPatternInfoPassBy>(bad_input_info));
+      }),
+      passing_through_in_port_([this](PassingThroughInfoPassBy passing_info) {
+          OnPassingThrough(
+              std::forward<PassingThroughInfoPassBy>(passing_info));
       }) {
     SetupImGuiStyle();
-    model_nodes_.reserve(ACTrieModel::kInitialNodesCount);
+    nodes_.reserve(ACTrieModel::kInitialNodesCount);
 }
 
 Drawer::UpdatedNodeObserver* Drawer::GetUpdatedNodeObserverPort() noexcept {
-    return &updated_node_port_;
+    return &updated_node_in_port_;
 }
 
 Drawer::FoundSubstringObserver* Drawer::GetFoundStringObserverPort() noexcept {
-    return &found_string_port_;
+    return &found_substring_in_port_;
 }
 
 Drawer::BadInputPatternObserver*
 Drawer::GetBadInputPatternObserverPort() noexcept {
-    return &bad_input_port_;
+    return &bad_input_in_port_;
+}
+
+Drawer::PassingThroughObserver*
+Drawer::GetPassingThroughObserverPort() noexcept {
+    return &passing_through_in_port_;
 }
 
 Drawer& Drawer::AddPatternSubscriber(PatternObserver* observer) {
@@ -75,6 +87,13 @@ void Drawer::OnNewFrame() {
 
 void Drawer::HandleNextEvent() {
     if (!events_.empty()) {
+        const auto time_now = std::chrono::high_resolution_clock::now();
+        const std::chrono::nanoseconds time_since_last_event =
+            time_now - time_since_last_event_handled_;
+        if (time_since_last_event <= EventParams::kTimeDelay) {
+            return;
+        }
+        time_since_last_event_handled_ = time_now;
         EventType event = std::move(events_.front());
         events_.pop_front();
         switch (event.index()) {
@@ -82,12 +101,16 @@ void Drawer::HandleNextEvent() {
                 HandleNodeUpdate(std::get<kUpdateNodeEventIndex>(event));
                 break;
             case kFoundSubstringEventIndex:
-                HandleFoundSubstring(
-                    std::get<kFoundSubstringEventIndex>(event));
+                HandleFoundSubstring(std::forward<FoundSubstringInfoPassBy>(
+                    std::get<kFoundSubstringEventIndex>(event)));
                 break;
             case kBadInputPatternEventIndex:
-                HandleBadPatternInput(
-                    std::get<kBadInputPatternEventIndex>(event));
+                HandleBadPatternInput(std::forward<BadInputPatternInfoPassBy>(
+                    std::get<kBadInputPatternEventIndex>(event)));
+                break;
+            case kPassingThroughEventIndex:
+                HandlePassingThrough(
+                    std::get<kPassingThroughEventIndex>(event));
                 break;
             default:
                 assert(false);
@@ -101,8 +124,14 @@ void Drawer::SetupImGuiStyle() {
 }
 
 void Drawer::OnUpdatedNode(UpdatedNodeInfoPassBy updated_node_info) {
-    events_.emplace_back(
-        std::forward<UpdatedNodeInfoPassBy>(updated_node_info));
+    events_.emplace_back(CopiedUpdatedNodeInfo{
+        .node_index        = updated_node_info.node_index,
+        .parent_node_index = updated_node_info.parent_node_index,
+        .node              = ACTrieModel::ACTNode(updated_node_info.node.get()),
+        .status            = updated_node_info.status,
+        .parent_to_node_edge_symbol =
+            updated_node_info.parent_to_node_edge_symbol,
+    });
 }
 
 void Drawer::OnFoundSubstring(FoundSubstringInfoPassBy substring_info) {
@@ -114,32 +143,51 @@ void Drawer::OnBadPatternInput(BadInputPatternInfoPassBy bad_input_info) {
         std::forward<BadInputPatternInfoPassBy>(bad_input_info));
 }
 
-void Drawer::HandleNodeUpdate(const UpdatedNodeInfo& updated_node_info) {
+void Drawer::OnPassingThrough(PassingThroughInfoPassBy passing_info) {
+    events_.emplace_back(std::forward<PassingThroughInfoPassBy>(passing_info));
+}
+
+void Drawer::HandleNodeUpdate(const CopiedUpdatedNodeInfo& updated_node_info) {
     const auto node_index        = updated_node_info.node_index;
-    const auto node_parent_index = updated_node_info.node_parent_index;
+    const auto parent_node_index = updated_node_info.parent_node_index;
     if (node_index != ACTrieModel::kNullNodeIndex) {
-        assert(node_parent_index < node_index);
-        assert(node_parent_index < model_nodes_.size());
+        assert(parent_node_index < node_index);
+        assert(parent_node_index < nodes_.size());
     }
 
     switch (updated_node_info.status) {
         case ACTrieModel::UpdatedNodeStatus::kAdded: {
-            model_nodes_.emplace_back(updated_node_info.node);
-            assert(node_index == model_nodes_.size() - 1);
-            nodes_status_.emplace(
-                node_index,
-                NodeState{
-                    .node_parent_index = node_parent_index,
-                    .status            = NodeStatus::kAdded,
-                    .parent_to_node_edge_symbol =
-                        updated_node_info.parent_to_node_edge_symbol,
-                });
+            char parent_to_node_edge_symbol =
+                updated_node_info.parent_to_node_edge_symbol;
+            // We copy node because
+            // "std::move of the expression of the trivially-copyable type
+            // 'ACTrieModel::ACTNode' has no effect;"
+            nodes_.emplace_back(NodeState{
+                .node                       = updated_node_info.node,
+                .parent_index               = parent_node_index,
+                .parent_to_node_edge_symbol = parent_to_node_edge_symbol,
+                .coordinates = TreeParams::kNodeInvalidCoordinates});
+            assert(node_index == nodes_.size() - 1);
+            switch (node_index) {
+                case ACTrieModel::kNullNodeIndex:
+                case ACTrieModel::kFakePreRootIndex:
+                case ACTrieModel::kRootIndex:
+                    break;
+                default:
+                    nodes_[parent_node_index].node[ACTrieModel::SymbolToIndex(
+                        parent_to_node_edge_symbol)] = node_index;
+                    break;
+            }
+            RecalculateAllNodesPositions(nodes_);
             logger.DebugLog("Added new node");
         } break;
         case ACTrieModel::UpdatedNodeStatus::kSuffixLinksComputed: {
-            auto node_iter = nodes_status_.find(node_index);
-            assert(node_iter != nodes_status_.end());
-            node_iter->second.status = NodeStatus::kSuffixLinksComputed;
+            assert(node_index < nodes_.size());
+            const auto& updated_node            = updated_node_info.node;
+            nodes_[node_index].node.suffix_link = updated_node.suffix_link;
+            nodes_[node_index].node.compressed_suffix_link =
+                updated_node.compressed_suffix_link;
+            nodes_[node_index].node.word_index = updated_node.word_index;
             logger.DebugLog("Updated suffix links status for node");
         } break;
         default:
@@ -149,20 +197,36 @@ void Drawer::HandleNodeUpdate(const UpdatedNodeInfo& updated_node_info) {
 }
 
 void Drawer::HandleFoundSubstring(
-    const FoundSubstringInfo& found_substring_info) {
+    FoundSubstringInfoPassBy found_substring_info) {
     logger.DebugLog("Found substring: ", found_substring_info.found_substring);
-    found_words_.emplace_back(std::move(found_substring_info.found_substring));
+
+    std::string str = std::move(found_substring_info.found_substring);
+    // Start index will never be greater than 2^32,
+    //  but std::to_string(uint32_t) is noexcept.
+    std::string pos_str = std::to_string(
+        std::uint32_t(found_substring_info.substring_start_index));
+    constexpr std::string_view text = " at position ";
+    str.reserve(str.size() + text.size() + pos_str.size());
+    str += text;
+    str += pos_str;
+    found_words_.emplace_back(std::move(str));
+    found_word_node_index_ = found_substring_info.current_vertex_index;
 }
 
-void Drawer::HandleBadPatternInput(const BadInputPatternInfo& bad_symbol_info) {
+void Drawer::HandleBadPatternInput(BadInputPatternInfoPassBy bad_symbol_info) {
+    logger.DebugLog("Bad symbol: '", "'", bad_symbol_info.bad_symbol);
     is_bad_symbol_found_ = true;
     bad_symbol_position_ = bad_symbol_info.symbol_index;
     bad_symbol_          = bad_symbol_info.bad_symbol;
-    logger.DebugLog("Bad symbol: '", "'", bad_symbol_info.bad_symbol);
+}
+
+void Drawer::HandlePassingThrough(PassingThroughInfo passing_info) {
+    logger.DebugLog("Passing through node ", std::to_string(passing_info));
+    passing_through_node_index_ = passing_info;
 }
 
 void Drawer::Draw() {
-    ImGui::ShowDemoWindow();
+    // ImGui::ShowDemoWindow();
 
     if (is_window_rounding_disabled_) {
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
@@ -182,15 +246,17 @@ void Drawer::Draw() {
     const ImVec2 end_of_available_space = canvas_screen_pos + available_size;
     const auto [available_width, available_height] = available_size;
     const ImVec2 canvas_size(
-        available_width * CanvasConstants::kTreeDrawingCanvasScaleX,
-        available_height * CanvasConstants::kTreeDrawingCanvasScaleY);
+        std::max(available_width * CanvasParams::kTreeDrawingCanvasScaleX,
+                 1.0f),
+        std::max(available_height * CanvasParams::kTreeDrawingCanvasScaleY,
+                 1.0f));
     const ImVec2 canvas_end_pos = canvas_screen_pos + canvas_size;
     const float tree_indent_width =
-        available_width * CanvasConstants::kTreeDrawingCanvasIndentScaleX;
+        available_width * CanvasParams::kTreeDrawingCanvasIndentScaleX;
     const float text_input_height =
-        available_height * CanvasConstants::kTextInputHeightScaleY;
+        available_height * CanvasParams::kTextInputHeightScaleY;
     const float text_input_indent =
-        available_height * CanvasConstants::kTextInputIndentScaleY;
+        available_height * CanvasParams::kTextInputIndentScaleY;
     const ImVec2 text_input_start_pos(canvas_end_pos.x + tree_indent_width,
                                       canvas_screen_pos.y);
     const ImVec2 text_input_end_pos(end_of_available_space.x,
@@ -219,20 +285,74 @@ void Drawer::Draw() {
 }
 
 void Drawer::DrawACTrieTree(ImVec2 canvas_screen_pos, ImVec2 canvas_end_pos) {
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    draw_list->AddRectFilled(canvas_screen_pos, canvas_end_pos,
-                             Palette::AsImU32::kGrayColor);
-    draw_list->AddRect(canvas_screen_pos, canvas_end_pos,
-                       Palette::AsImU32::kWhiteColor);
+    const float available_height  = (canvas_end_pos.y - canvas_screen_pos.y);
+    const ImVec2 canvas_start_pos = ImVec2(
+        canvas_screen_pos.x,
+        canvas_screen_pos.y +
+            available_height * CanvasParams::kCanvasButtonsIndentHeightScaleY);
+
+    if (is_inputing_text_) {
+        ImGui::Checkbox("Show suffix links to root", &show_root_suffix_links_);
+        ImGui::SameLine();
+        ImGui::Checkbox("Show compressed suffix links to root",
+                        &show_root_compressed_suffix_links_);
+    }
+
+    ImDrawList& draw_list = *ImGui::GetWindowDrawList();
+    draw_list.AddRectFilled(canvas_start_pos, canvas_end_pos,
+                            Palette::AsImU32::kGrayColor);
+    draw_list.AddRect(canvas_start_pos, canvas_end_pos,
+                      Palette::AsImU32::kWhiteColor);
+
+    ImGui::InvisibleButton(
+        "canvas", canvas_end_pos - canvas_start_pos,
+        ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
+    const bool is_active = ImGui::IsItemActive();
+    if (is_active && ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0)) {
+        const ImGuiIO& io = ImGui::GetIO();
+        scroll_trie_canvas_coordinates_.x += io.MouseDelta.x;
+        scroll_trie_canvas_coordinates_.y += io.MouseDelta.y;
+    }
+
+    const ImVec2 canvas_move_vector =
+        canvas_start_pos + scroll_trie_canvas_coordinates_;
+    for (VertexIndex node_index = ACTrieModel::kRootIndex;
+         node_index < nodes_.size(); node_index++) {
+        const NodeState& node_state = nodes_[node_index];
+        assert(node_state.coordinates != TreeParams::kNodeInvalidCoordinates);
+        const ImVec2 node_center = node_state.coordinates + canvas_move_vector;
+        draw_list.AddCircle(node_center, TreeParams::kNodeRadius,
+                            Palette::AsImU32::kBlackColor);
+        if (node_state.node.IsTerminal()) {
+            DrawTerminalNodeSign(draw_list, node_center);
+        }
+
+        if (node_index == passing_through_node_index_) {
+            draw_list.AddCircle(node_center,
+                                TreeParams::kNodeRadius *
+                                    TreeParams::kPassingThroughRadiusScale,
+                                Palette::AsImU32::kYellowColor);
+        }
+        if (node_index == found_word_node_index_) {
+            draw_list.AddCircle(node_center,
+                                TreeParams::kNodeRadius *
+                                    TreeParams::kPassingThroughRadiusScale,
+                                Palette::AsImU32::kOrangeColor);
+        }
+
+        DrawEdgesBetweenNodeAndChildren(draw_list, node_index,
+                                        canvas_move_vector);
+        DrawSuffixLinksForNode(draw_list, node_index, canvas_move_vector);
+    }
 }
 
 void Drawer::DrawIOBlocks(ImVec2 io_blocks_start_pos,
                           ImVec2 io_blocks_end_pos) {
     const float blocks_indent =
-        io_blocks_end_pos.x * CanvasConstants::kIOBlocksIndentScaleX;
+        io_blocks_end_pos.x * CanvasParams::kIOBlocksIndentScaleX;
     const float block_width =
         (io_blocks_end_pos.x - io_blocks_start_pos.x - blocks_indent) /
-        CanvasConstants::kNumberOfIOBlocks;
+        CanvasParams::kNumberOfIOBlocks;
 
     const ImVec2 pattern_block_start_pos = io_blocks_start_pos;
     const ImVec2 pattern_block_end_pos(io_blocks_start_pos.x + block_width,
@@ -275,12 +395,12 @@ void Drawer::DrawPatternInputBlock(ImVec2 block_start_pos,
     if (copy_to_clipboard) {
         ImGui::LogToClipboard();
     }
+    const ImVec4 color = Palette::AsImColor::kBrightRedColor;
+    ImGui::PushStyleColor(ImGuiCol_Text, color);
     for (const std::string& item : patterns_input_history_) {
-        ImVec4 color = Palette::AsImColor::kRedColor;
-        ImGui::PushStyleColor(ImGuiCol_Text, color);
         ImGui::TextUnformatted(item.data(), item.data() + item.size());
-        ImGui::PopStyleColor();
     }
+    ImGui::PopStyleColor();
     if (copy_to_clipboard) {
         ImGui::LogFinish();
     }
@@ -299,7 +419,7 @@ void Drawer::DrawPatternInputBlock(ImVec2 block_start_pos,
     if (!is_inputing_text_) {
         bool reclaim_focus =
             AddPatternInput(scrolling_region_size.x *
-                            CanvasConstants::kPatternInputFieldWidthScaleX);
+                            CanvasParams::kPatternInputFieldWidthScaleX);
         ImGui::SetItemDefaultFocus();
         // Auto-focus on window apparition
         if (reclaim_focus) {
@@ -342,7 +462,7 @@ void Drawer::DrawTextInputBlock(ImVec2 block_start_pos, ImVec2 block_end_pos) {
     if (is_inputing_text_) {
         const float text_input_box_width =
             (block_end_pos.x - block_start_pos.x) *
-            CanvasConstants::kTextInputBoxWithScaleX;
+            CanvasParams::kTextInputBoxWithScaleX;
         bool reclaim_focus = AddTextInput(text_input_box_width);
         ImGui::SetItemDefaultFocus();
         // Auto-focus on window apparition
@@ -351,7 +471,7 @@ void Drawer::DrawTextInputBlock(ImVec2 block_start_pos, ImVec2 block_end_pos) {
         }
     } else {
         const ImVec2 button_size = (block_end_pos - block_start_pos) /
-                                   CanvasConstants::kButtonDecreaseScale;
+                                   CanvasParams::kButtonDecreaseScale;
         is_inputing_text_ = ImGui::Button("Build AC trie", button_size);
         if (is_inputing_text_) {
             actrie_build_port_.Notify();
@@ -464,7 +584,6 @@ void Drawer::PatternInputImGuiCallback(ImGuiInputTextCallbackData& data) {
 }
 
 void Drawer::TextInputImGuiCallback(ImGuiInputTextCallbackData& data) {
-    logger.DebugLog("TEST");
     if (data.EventFlag != ImGuiInputTextFlags_CallbackHistory ||
         texts_input_history_.Empty()) {
         return;
@@ -491,8 +610,7 @@ void Drawer::ClearStateAndNotify() {
     is_clear_button_pressed_ = false;
     is_bad_symbol_found_     = false;
     events_.clear();
-    model_nodes_.clear();
-    nodes_status_.clear();
+    nodes_.clear();
     patterns_input_history_.Clear();
     texts_input_history_.Clear();
     found_words_.clear();
@@ -519,6 +637,223 @@ std::string_view Drawer::TrimSpaces(std::string_view str) noexcept {
         r--;
     }
     return {str.begin() + l, r - l};
+}
+
+void Drawer::RecalculateAllNodesPositions(std::vector<NodeState>& nodes) {
+    if (ACTrieModel::kRootIndex >= nodes.size()) {
+        return;
+    }
+    struct BFSPair {
+        VertexIndex node_index;
+        std::uint32_t bfs_depth;
+    };
+    std::deque<BFSPair> indexes_queue;
+    std::vector<VertexIndex> leaf_node_indexes;
+    leaf_node_indexes.reserve(nodes.size() / 2);
+    indexes_queue.push_back({ACTrieModel::kRootIndex, 0});
+    float leaf_nodes_x_coord = 0;
+    do {
+        const auto [node_index, node_bfs_depth] = indexes_queue.front();
+        indexes_queue.pop_front();
+        assert(node_index < nodes.size());
+        bool has_at_least_one_child = false;
+        for (VertexIndex child_index : nodes[node_index].node.edges) {
+            if (child_index == ACTrieModel::kNullNodeIndex) {
+                continue;
+            }
+            has_at_least_one_child = true;
+            indexes_queue.push_back({child_index, node_bfs_depth + 1});
+        }
+        if (!has_at_least_one_child) {
+            printf("%u -> %u via %c\n", nodes[node_index].parent_index,
+                   node_index, nodes[node_index].parent_to_node_edge_symbol);
+            leaf_nodes_x_coord += TreeParams::kNodeOffsetX;
+            leaf_nodes_x_coord += TreeParams::kNodeRadius;
+            nodes[node_index].coordinates.x = leaf_nodes_x_coord;
+            leaf_nodes_x_coord += TreeParams::kNodeRadius;
+            leaf_nodes_x_coord += TreeParams::kNodeOffsetX;
+            leaf_nodes_x_coord += TreeParams::kDeltaXBetweenNodes;
+            nodes[node_index].coordinates.y =
+                static_cast<float>(node_bfs_depth) *
+                TreeParams::kDeltaYBetweenNodeCenters;
+            if (leaf_node_indexes.empty() ||
+                leaf_node_indexes.back() != node_index) {
+                leaf_node_indexes.push_back(node_index);
+            }
+        }
+    } while (!indexes_queue.empty());
+    AlignNodesAboveLeafNodes(nodes, std::move(leaf_node_indexes));
+}
+
+void Drawer::AlignNodesAboveLeafNodes(
+    std::vector<NodeState>& nodes,
+    std::vector<VertexIndex>&& leaf_node_indexes) {
+    assert(std::unordered_set<VertexIndex>(leaf_node_indexes.begin(),
+                                           leaf_node_indexes.end())
+               .size() == leaf_node_indexes.size());
+
+    std::vector<VertexIndex> nodes_on_current_layer =
+        std::move(leaf_node_indexes);
+    std::vector<VertexIndex> nodes_on_layer_above;
+    nodes_on_layer_above.reserve(nodes_on_current_layer.size());
+
+    while (!nodes_on_current_layer.empty()) {
+        for (std::size_t i = 0; i < nodes_on_current_layer.size();) {
+            const VertexIndex leftmost_child_index = nodes_on_current_layer[i];
+            assert(leftmost_child_index < nodes.size());
+            const VertexIndex parent_index =
+                nodes[leftmost_child_index].parent_index;
+
+            float leftmost_x_coord  = nodes[leftmost_child_index].coordinates.x;
+            float rightmost_x_coord = leftmost_x_coord;
+            const float y_coord     = nodes[leftmost_child_index].coordinates.y;
+
+            auto node_has_same_parent =
+                [&nodes, parent_index](VertexIndex node_index) noexcept {
+                    return nodes[node_index].parent_index == parent_index;
+                };
+            std::size_t j = i;
+            while (j + 1 < nodes_on_current_layer.size() &&
+                   node_has_same_parent(nodes_on_current_layer[j + 1])) {
+                j++;
+                const auto [node_x_coord, node_y_coord] =
+                    nodes[nodes_on_current_layer[j]].coordinates;
+                assert(node_y_coord == y_coord);
+                leftmost_x_coord  = std::min(leftmost_x_coord, node_x_coord);
+                rightmost_x_coord = std::max(rightmost_x_coord, node_x_coord);
+            }
+            const VertexIndex rightmost_child_index = nodes_on_current_layer[j];
+            assert(rightmost_child_index < nodes.size());
+            assert(nodes[rightmost_child_index].parent_index == parent_index);
+
+            const float parent_x_coord =
+                (leftmost_x_coord + rightmost_x_coord) / 2;
+            const float parent_y_coord =
+                y_coord - TreeParams::kDeltaYBetweenNodeCenters;
+            nodes[parent_index].coordinates =
+                ImVec2(parent_x_coord, parent_y_coord);
+
+            assert(nodes_on_layer_above.empty() ||
+                   nodes_on_layer_above.back() != parent_index);
+            if (parent_index != ACTrieModel::kFakePreRootIndex) {
+                nodes_on_layer_above.push_back(parent_index);
+            } else {
+                assert(i == j);
+                assert(leftmost_child_index == rightmost_child_index);
+                assert(leftmost_child_index == ACTrieModel::kRootIndex);
+            }
+
+            i = j + 1;
+        }
+        nodes_on_current_layer.swap(nodes_on_layer_above);
+        nodes_on_layer_above.clear();
+    }
+}
+
+void Drawer::DrawTerminalNodeSign(ImDrawList& draw_list, ImVec2 node_center) {
+    constexpr float len =
+        TreeParams::kNodeRadius / std::numbers::sqrt2_v<float>;
+    const ImVec2 left_upper_point  = node_center - len;
+    const ImVec2 right_lower_point = left_upper_point + len * 2;
+    const ImVec2 left_lower_point =
+        ImVec2(left_upper_point.x, right_lower_point.y);
+    const ImVec2 right_upper_point =
+        ImVec2(right_lower_point.x, left_upper_point.y);
+    draw_list.AddLine(left_upper_point, right_lower_point,
+                      Palette::AsImU32::kBlackColor);
+    draw_list.AddLine(left_lower_point, right_upper_point,
+                      Palette::AsImU32::kBlackColor);
+}
+
+void Drawer::DrawEdgesBetweenNodeAndChildren(ImDrawList& draw_list,
+                                             VertexIndex node_index,
+                                             ImVec2 canvas_move_vector) const {
+    assert(node_index < nodes_.size());
+    const NodeState& node_state = nodes_[node_index];
+    const ImVec2 node_center    = node_state.coordinates + canvas_move_vector;
+    for (VertexIndex child_index : node_state.node.edges) {
+        if (child_index == ACTrieModel::kNullNodeIndex) {
+            continue;
+        }
+        assert(child_index < nodes_.size());
+        const NodeState& child_node_state = nodes_[child_index];
+        const ImVec2 child_center =
+            child_node_state.coordinates + canvas_move_vector;
+        DrawEdge(draw_list, node_center, child_center,
+                 child_node_state.parent_to_node_edge_symbol);
+    }
+}
+
+void Drawer::DrawEdge(ImDrawList& draw_list, ImVec2 node_center,
+                      ImVec2 child_center, char edge_symbol,
+                      ImU32 edge_color) const {
+    const ImVec2 vec_between_circle_centers = child_center - node_center;
+    const float vec_len =
+        std::hypot(vec_between_circle_centers.x, vec_between_circle_centers.y);
+    assert(vec_len > TreeParams::kNodeRadius);
+    const ImVec2 inner_radius_vec =
+        vec_between_circle_centers / vec_len * TreeParams::kNodeRadius;
+    const ImVec2 edge_start_pos = node_center + inner_radius_vec;
+    const ImVec2 edge_end_pos   = child_center - inner_radius_vec;
+    draw_list.AddLine(edge_start_pos, edge_end_pos, edge_color,
+                      TreeParams::kEdgeThickness);
+
+    if (edge_symbol != '\0') {
+        const char edge_text[]              = {edge_symbol, '\0'};
+        const std::string_view edge_text_sv = edge_text;
+        const ImVec2 edge_center_pos =
+            ImVecMiddle(edge_start_pos, edge_end_pos);
+        const float edge_rectanle_height = edge_end_pos.y - edge_start_pos.y;
+        const ImVec2 text_pos =
+            ImVec2(edge_center_pos.x,
+                   edge_center_pos.y - edge_rectanle_height *
+                                           TreeParams::kEdgeTextPositionScaleY);
+        draw_list.AddText(text_pos, Palette::AsImU32::kGreenColor,
+                          edge_text_sv.begin(), edge_text_sv.end());
+    }
+}
+
+void Drawer::DrawSuffixLinksForNode(ImDrawList& draw_list,
+                                    VertexIndex node_index,
+                                    ImVec2 canvas_move_vector) const {
+    assert(node_index < nodes_.size());
+    switch (node_index) {
+        case ACTrieModel::kNullNodeIndex:
+        case ACTrieModel::kFakePreRootIndex:
+            assert(false);
+            break;
+        case ACTrieModel::kRootIndex:
+            return;
+        default:
+            break;
+    }
+    const NodeState& node_state      = nodes_[node_index];
+    const ACTrieModel::ACTNode& node = node_state.node;
+    const VertexIndex suffix_link    = node.suffix_link;
+    if (suffix_link == ACTrieModel::kNullNodeIndex) {
+        return;
+    }
+    const VertexIndex compressed_suffix_link = node.compressed_suffix_link;
+    assert(compressed_suffix_link != ACTrieModel::kNullNodeIndex);
+
+    const ImVec2 node_center = node_state.coordinates + canvas_move_vector;
+
+    if (suffix_link != ACTrieModel::kRootIndex || show_root_suffix_links_) {
+        assert(suffix_link < nodes_.size());
+        const ImVec2 sl_node_center =
+            nodes_[suffix_link].coordinates + canvas_move_vector;
+        DrawEdge(draw_list, node_center, sl_node_center, '\0',
+                 Palette::AsImU32::kBlueColor);
+    }
+
+    if (compressed_suffix_link != ACTrieModel::kRootIndex ||
+        show_root_compressed_suffix_links_) {
+        assert(compressed_suffix_link < nodes_.size());
+        const ImVec2 csl_node_center =
+            nodes_[compressed_suffix_link].coordinates + canvas_move_vector;
+        DrawEdge(draw_list, node_center, csl_node_center, '\0',
+                 Palette::AsImU32::kGreenColor);
+    }
 }
 
 }  // namespace AppSpace::GraphicsUtils

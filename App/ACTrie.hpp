@@ -72,7 +72,7 @@ public:
 
     struct UpdatedNodeInfo {
         VertexIndex node_index;
-        VertexIndex node_parent_index;
+        VertexIndex parent_node_index;
         std::reference_wrapper<const ACTNode> node;
         UpdatedNodeStatus status;
         char parent_to_node_edge_symbol;
@@ -86,17 +86,20 @@ public:
         std::size_t symbol_index;
         char bad_symbol;
     };
-    using UpdatedNodeInfoPassBy = std::add_rvalue_reference_t<UpdatedNodeInfo>;
+    using PassingThroughInfo    = VertexIndex;
+    using UpdatedNodeInfoPassBy = UpdatedNodeInfo;
     using FoundSubstringInfoPassBy =
         std::add_rvalue_reference_t<FoundSubstringInfo>;
-    using BadInputPatternInfoPassBy =
-        std::add_rvalue_reference_t<BadInputPatternInfo>;
+    using BadInputPatternInfoPassBy = BadInputPatternInfo;
+    using PassingThroughInfoPassBy  = PassingThroughInfo;
     using UpdatedNodeObserver =
         Observer<UpdatedNodeInfo, UpdatedNodeInfoPassBy>;
     using FoundSubstringObserver =
         Observer<FoundSubstringInfo, FoundSubstringInfoPassBy>;
     using BadInputPatternObserver =
         Observer<BadInputPatternInfo, BadInputPatternInfoPassBy>;
+    using PassingThroughObserver =
+        Observer<PassingThroughInfo, PassingThroughInfoPassBy>;
 
     ACTrie();
     ACTrie& AddPattern(Pattern pattern);
@@ -106,8 +109,10 @@ public:
     ACTrie& AddSubscriber(UpdatedNodeObserver* observer);
     ACTrie& AddSubscriber(FoundSubstringObserver* observer);
     ACTrie& AddSubscriber(BadInputPatternObserver* observer);
+    ACTrie& AddSubscriber(PassingThroughObserver* observer);
     constexpr std::size_t NodesSize() const noexcept;
     constexpr std::size_t PatternsSize() const noexcept;
+    static constexpr VertexIndex SymbolToIndex(char symbol) noexcept;
 
 private:
     static constexpr std::size_t kDefaultNodesCapacity = 16;
@@ -117,18 +122,18 @@ private:
     void JumpThroughCompressedSuffixLinks(VertexIndex current_node_index,
                                           std::size_t position_in_text,
                                           std::string_view text);
-    static VertexIndex SymbolToIndex(char symbol) noexcept;
     void ComputeLinksForNodeChildren(VertexIndex node_index,
                                      std::queue<VertexIndex>& queue);
     bool IsACTrieInCorrectState() const;
     bool IsFakePrerootInCorrectState() const;
     void NotifyAboutAddedNode(VertexIndex added_node_index,
-                              VertexIndex node_parent_index,
+                              VertexIndex parent_node_index,
                               char parent_to_node_edge_symbol);
     void NotifyAboutComputedSuffixLinks(VertexIndex node_index,
-                                        VertexIndex node_parent_index,
+                                        VertexIndex parent_node_index,
                                         char parent_to_node_edge_symbol);
     void NotifyAboutInitialNodes();
+    void NotifyAboutPassingThroughNode(VertexIndex node_index);
 
     std::vector<ACTNode> nodes_;
     std::vector<WordLength> words_lengths_;
@@ -138,6 +143,8 @@ private:
     Observable<FoundSubstringInfo, FoundSubstringInfoPassBy>
         found_substrings_port_;
     Observable<BadInputPatternInfo, BadInputPatternInfoPassBy> bad_input_port_;
+    Observable<PassingThroughInfo, PassingThroughInfoPassBy>
+        passing_through_port_;
 };
 
 constexpr std::size_t ACTrie::NodesSize() const noexcept {
@@ -146,6 +153,15 @@ constexpr std::size_t ACTrie::NodesSize() const noexcept {
 
 constexpr std::size_t ACTrie::PatternsSize() const noexcept {
     return words_lengths_.size();
+}
+
+constexpr ACTrie::VertexIndex ACTrie::SymbolToIndex(char symbol) noexcept {
+    std::int32_t symbol_as_int = static_cast<std::uint8_t>(symbol);
+    if constexpr (kIsCaseInsensetive) {
+        symbol_as_int = std::tolower(symbol_as_int);
+    }
+
+    return static_cast<VertexIndex>(symbol_as_int) - kAlphabetStart;
 }
 
 }  // namespace AppSpace::ACTrieDS

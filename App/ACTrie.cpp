@@ -107,10 +107,12 @@ ACTrie& ACTrie::FindAllSubstringsInText(std::string_view text) {
         VertexIndex symbol_index = SymbolToIndex(text[i]);
         if (symbol_index >= kAlphabetLength) {
             current_node_index = kRootIndex;
+            NotifyAboutPassingThroughNode(current_node_index);
             continue;
         }
 
         current_node_index = nodes_[current_node_index][symbol_index];
+        NotifyAboutPassingThroughNode(current_node_index);
         assert(current_node_index != kNullNodeIndex);
         if (nodes_[current_node_index].IsTerminal()) {
             NotifyAboutFoundSubstring(current_node_index, i, text);
@@ -135,6 +137,11 @@ ACTrie& ACTrie::AddSubscriber(FoundSubstringObserver* observer) {
 
 ACTrie& ACTrie::AddSubscriber(BadInputPatternObserver* observer) {
     bad_input_port_.Subscribe(observer);
+    return *this;
+}
+
+ACTrie& ACTrie::AddSubscriber(PassingThroughObserver* observer) {
+    passing_through_port_.Subscribe(observer);
     return *this;
 }
 
@@ -166,15 +173,6 @@ void ACTrie::JumpThroughCompressedSuffixLinks(VertexIndex current_node_index,
         assert(nodes_[terminal_node_index].IsTerminal());
         NotifyAboutFoundSubstring(terminal_node_index, position_in_text, text);
     }
-}
-
-ACTrie::VertexIndex ACTrie::SymbolToIndex(char symbol) noexcept {
-    std::int32_t symbol_as_int = static_cast<std::uint8_t>(symbol);
-    if constexpr (kIsCaseInsensetive) {
-        symbol_as_int = std::tolower(symbol_as_int);
-    }
-
-    return static_cast<VertexIndex>(symbol_as_int) - kAlphabetStart;
 }
 
 void ACTrie::ComputeLinksForNodeChildren(VertexIndex node_index,
@@ -250,11 +248,11 @@ bool ACTrie::IsFakePrerootInCorrectState() const {
 }
 
 void ACTrie::NotifyAboutAddedNode(VertexIndex added_node_index,
-                                  VertexIndex node_parent_index,
+                                  VertexIndex parent_node_index,
                                   char parent_to_node_edge_symbol) {
     updated_nodes_port_.Notify(UpdatedNodeInfo{
         .node_index                 = added_node_index,
-        .node_parent_index          = node_parent_index,
+        .parent_node_index          = parent_node_index,
         .node                       = nodes_[added_node_index],
         .status                     = UpdatedNodeStatus::kAdded,
         .parent_to_node_edge_symbol = parent_to_node_edge_symbol,
@@ -262,11 +260,11 @@ void ACTrie::NotifyAboutAddedNode(VertexIndex added_node_index,
 }
 
 void ACTrie::NotifyAboutComputedSuffixLinks(VertexIndex node_index,
-                                            VertexIndex node_parent_index,
+                                            VertexIndex parent_node_index,
                                             char parent_to_node_edge_symbol) {
     updated_nodes_port_.Notify(UpdatedNodeInfo{
         .node_index                 = node_index,
-        .node_parent_index          = node_parent_index,
+        .parent_node_index          = parent_node_index,
         .node                       = nodes_[node_index],
         .status                     = UpdatedNodeStatus::kSuffixLinksComputed,
         .parent_to_node_edge_symbol = parent_to_node_edge_symbol,
@@ -279,6 +277,10 @@ void ACTrie::NotifyAboutInitialNodes() {
     NotifyAboutAddedNode(kFakePreRootIndex, kNullNodeIndex, '\0');
     NotifyAboutAddedNode(kRootIndex, kFakePreRootIndex, '\0');
     notified_about_initial_nodes_ = true;
+}
+
+void ACTrie::NotifyAboutPassingThroughNode(VertexIndex node_index) {
+    passing_through_port_.Notify(node_index);
 }
 
 }  // namespace AppSpace::ACTrieDS

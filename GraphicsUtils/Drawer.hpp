@@ -2,6 +2,7 @@
 
 #include <imgui.h>
 
+#include <chrono>
 #include <deque>
 #include <map>
 #include <variant>
@@ -13,22 +14,28 @@
 namespace AppSpace::GraphicsUtils {
 
 class Drawer final {
-    using ACTrieModel               = ACTrieDS::ACTrie;
+    using ACTrieModel = ACTrieDS::ACTrie;
+    using VertexIndex = ACTrieModel::VertexIndex;
+    using Pattern     = ACTrieModel::Pattern;
+    using Text        = ACTrieModel::Text;
+
+    using PatternObserver     = Observer<Pattern>;
+    using TextObserver        = Observer<Text>;
+    using ACTrieResetObserver = Observer<void, void>;
+    using ACTrieBuildObserver = Observer<void, void>;
+
+    using UpdatedNodeInfo           = ACTrieModel::UpdatedNodeInfo;
     using FoundSubstringInfo        = ACTrieModel::FoundSubstringInfo;
     using BadInputPatternInfo       = ACTrieModel::BadInputPatternInfo;
-    using Pattern                   = ACTrieModel::Pattern;
-    using Text                      = ACTrieModel::Text;
-    using UpdatedNodeInfo           = ACTrieModel::UpdatedNodeInfo;
-    using PatternObserver           = Observer<Pattern>;
-    using TextObserver              = Observer<Text>;
-    using ACTrieResetObserver       = Observer<void, void>;
-    using ACTrieBuildObserver       = Observer<void, void>;
+    using PassingThroughInfo        = ACTrieModel::PassingThroughInfo;
     using UpdatedNodeInfoPassBy     = ACTrieModel::UpdatedNodeInfoPassBy;
     using FoundSubstringInfoPassBy  = ACTrieModel::FoundSubstringInfoPassBy;
     using BadInputPatternInfoPassBy = ACTrieModel::BadInputPatternInfoPassBy;
+    using PassingThroughInfoPassBy  = ACTrieModel::PassingThroughInfoPassBy;
     using UpdatedNodeObserver       = ACTrieModel::UpdatedNodeObserver;
     using FoundSubstringObserver    = ACTrieModel::FoundSubstringObserver;
     using BadInputPatternObserver   = ACTrieModel::BadInputPatternObserver;
+    using PassingThroughObserver    = ACTrieModel::PassingThroughObserver;
 
 public:
     Drawer();
@@ -36,6 +43,7 @@ public:
     UpdatedNodeObserver* GetUpdatedNodeObserverPort() noexcept;
     FoundSubstringObserver* GetFoundStringObserverPort() noexcept;
     BadInputPatternObserver* GetBadInputPatternObserverPort() noexcept;
+    PassingThroughObserver* GetPassingThroughObserverPort() noexcept;
     Drawer& AddPatternSubscriber(PatternObserver* observer);
     Drawer& AddTextSubscriber(TextObserver* observer);
     Drawer& AddACTrieResetSubscriber(ACTrieResetObserver* observer);
@@ -43,14 +51,127 @@ public:
     void OnNewFrame();
 
 private:
+    struct Palette final {
+        struct AsImU32 final {
+            static constexpr ImU32 kBlackColor     = IM_COL32_BLACK;
+            static constexpr ImU32 kWhiteColor     = IM_COL32_WHITE;
+            static constexpr ImU32 kRedColor       = IM_COL32(255, 0, 0, 255);
+            static constexpr ImU32 kGreenColor     = IM_COL32(0, 255, 0, 255);
+            static constexpr ImU32 kBlueColor      = IM_COL32(0, 0, 255, 255);
+            static constexpr ImU32 kGrayColor      = IM_COL32(50, 50, 50, 255);
+            static constexpr ImU32 kBrightRedColor = IM_COL32(250, 60, 50, 255);
+            static constexpr ImU32 kYellowColor    = IM_COL32(255, 255, 0, 255);
+            static constexpr ImU32 kOrangeColor    = IM_COL32(255, 165, 0, 255);
+        };
+
+        struct AsImColor final {
+            static constexpr ImColor kBlackColor =
+                ImColor(AsImU32::kBlackColor);
+            static constexpr ImColor kWhiteColor =
+                ImColor(AsImU32::kWhiteColor);
+            static constexpr ImColor kRedColor = ImColor(AsImU32::kRedColor);
+            static constexpr ImColor kGreenColor =
+                ImColor(AsImU32::kGreenColor);
+            static constexpr ImColor kBlueColor = ImColor(AsImU32::kBlueColor);
+            static constexpr ImColor kGrayColor = ImColor(AsImU32::kGrayColor);
+            static constexpr ImColor kBrightRedColor =
+                ImColor(AsImU32::kBrightRedColor);
+            static constexpr ImColor kYellowColor =
+                ImColor(AsImU32::kYellowColor);
+            static constexpr ImColor kOrangeColor =
+                ImColor(AsImU32::kOrangeColor);
+        };
+    };
+    struct CanvasParams final {
+        static constexpr float kTreeDrawingCanvasScaleX         = 0.6f;
+        static constexpr float kTreeDrawingCanvasScaleY         = 1.0f;
+        static constexpr float kTreeDrawingCanvasIndentScaleX   = 0.005f;
+        static constexpr float kPatternInputFieldWidthScaleX    = 0.5f;
+        static constexpr float kCanvasButtonsIndentHeightScaleY = 0.05f;
+        static constexpr float kIOBlocksIndentScaleX            = 0.005f;
+        static constexpr float kTextInputHeightScaleY =
+            kCanvasButtonsIndentHeightScaleY;
+        static constexpr float kTextInputIndentScaleY     = 0.005f;
+        static constexpr float kButtonDecreaseScale       = 2.0f;
+        static constexpr float kTextInputBoxWithScaleX    = 0.7f;
+        static constexpr int kNumberOfIOBlocks            = 2;
+        static constexpr ImVec2 kInitialScrollingPosition = ImVec2(50, 50);
+
+        static_assert(kTreeDrawingCanvasScaleX +
+                          kTreeDrawingCanvasIndentScaleX +
+                          kIOBlocksIndentScaleX <
+                      1.0f);
+        static_assert(kInitialScrollingPosition.x > 0 &&
+                      kInitialScrollingPosition.y > 0);
+    };
+    struct TreeParams final {
+        static constexpr ImVec2 kNodeInvalidCoordinates   = ImVec2(-1, -1);
+        static constexpr ImVec2 kRootNodeCoordinates      = ImVec2(0, 0);
+        static constexpr float kNodeRadius                = 15.0f;
+        static constexpr float kPassingThroughRadiusScale = 0.8f;
+        static constexpr float kFoundSubstringRadiusScale = 0.6f;
+        static constexpr float kNodeDiameter              = kNodeRadius * 2;
+        static constexpr float kDeltaYBetweenNodeCenters  = 50.0f;
+        static constexpr float kDeltaXBetweenNodes        = 5.0f;
+        static constexpr float kNodeOffsetX               = 2.0f;
+        static constexpr float kEdgeThickness             = 2.0f;
+        static constexpr float kEdgeTextPositionScaleY    = 0.2f;
+        static_assert(0 < kEdgeTextPositionScaleY &&
+                      kEdgeTextPositionScaleY < 0.5);
+        static_assert(kDeltaYBetweenNodeCenters > kNodeDiameter);
+        static_assert(0 < kPassingThroughRadiusScale &&
+                      kPassingThroughRadiusScale < 1);
+        static_assert(0 < kFoundSubstringRadiusScale &&
+                      kFoundSubstringRadiusScale < 1);
+        static_assert(kFoundSubstringRadiusScale != kPassingThroughRadiusScale);
+    };
+    struct EventParams final {
+        using Time =
+            std::chrono::time_point<std::chrono::high_resolution_clock>;
+        static constexpr auto kTimeDelay = std::chrono::nanoseconds(50'000'000);
+    };
+    struct NodeState final {
+        ACTrieModel::ACTNode node;
+        VertexIndex parent_index;
+        char parent_to_node_edge_symbol;
+        ImVec2 coordinates;
+    };
+    // same as UpdatedNodeInfo but with copied node
+    struct CopiedUpdatedNodeInfo final {
+        VertexIndex node_index;
+        VertexIndex parent_node_index;
+        ACTrieModel::ACTNode node;
+        ACTrieModel::UpdatedNodeStatus status;
+        char parent_to_node_edge_symbol;
+    };
+    using EventType = std::variant<CopiedUpdatedNodeInfo, FoundSubstringInfo,
+                                   BadInputPatternInfo, PassingThroughInfo>;
+    // We use enum instead of enum class because
+    //  this constants are used to identify type
+    //  according to std::variant<...>::index()
+    //  (we need an implicit cast from std::size_t
+    //   to our enum and vice versa)
+    enum EventTypeIndex : std::size_t {
+        kUpdateNodeEventIndex      = 0,
+        kFoundSubstringEventIndex  = 1,
+        kBadInputPatternEventIndex = 2,
+        kPassingThroughEventIndex  = 3,
+    };
+    struct LeafNodeInfo {
+        VertexIndex node_index;
+        VertexIndex parent_node_index;
+    };
+
     void HandleNextEvent();
     void SetupImGuiStyle();
     void OnUpdatedNode(UpdatedNodeInfoPassBy updated_node_info);
     void OnFoundSubstring(FoundSubstringInfoPassBy substring_info);
     void OnBadPatternInput(BadInputPatternInfoPassBy bad_input_info);
-    void HandleNodeUpdate(const UpdatedNodeInfo& updated_node_info);
-    void HandleFoundSubstring(const FoundSubstringInfo& updated_node_info);
-    void HandleBadPatternInput(const BadInputPatternInfo& updated_node_info);
+    void OnPassingThrough(PassingThroughInfoPassBy passing_info);
+    void HandleNodeUpdate(const CopiedUpdatedNodeInfo& updated_node_info);
+    void HandleFoundSubstring(FoundSubstringInfoPassBy updated_node_info);
+    void HandleBadPatternInput(BadInputPatternInfoPassBy updated_node_info);
+    void HandlePassingThrough(PassingThroughInfo passing_info);
     void Draw();
     void DrawACTrieTree(ImVec2 canvas_screen_pos, ImVec2 canvas_end_pos);
     void DrawIOBlocks(ImVec2 io_blocks_start_pos, ImVec2 io_blocks_end_pos);
@@ -66,101 +187,59 @@ private:
     void ClearPatternInputBuffer() noexcept;
     void ClearTextInputBuffer() noexcept;
     static std::string_view TrimSpaces(std::string_view str) noexcept;
-
-    struct Palette final {
-        struct AsImU32 final {
-            static constexpr ImU32 kGrayColor  = IM_COL32(50, 50, 50, 255);
-            static constexpr ImU32 kRedColor   = IM_COL32(250, 60, 50, 255);
-            static constexpr ImU32 kBlackColor = IM_COL32_BLACK;
-            static constexpr ImU32 kWhiteColor = IM_COL32_WHITE;
-            static constexpr ImU32 kGreenColor = IM_COL32(0, 250, 0, 255);
-        };
-
-        struct AsImColor final {
-            static constexpr ImColor kGrayColor = ImColor(AsImU32::kGrayColor);
-            static constexpr ImColor kRedColor  = ImColor(AsImU32::kRedColor);
-            static constexpr ImColor kBlackColor =
-                ImColor(AsImU32::kBlackColor);
-            static constexpr ImColor kWhiteColor =
-                ImColor(AsImU32::kWhiteColor);
-            static constexpr ImColor kGreenColor =
-                ImColor(AsImU32::kGreenColor);
-        };
-    };
-
-    struct CanvasConstants final {
-        static constexpr float kTreeDrawingCanvasScaleX       = 0.6f;
-        static constexpr float kTreeDrawingCanvasScaleY       = 1.0f;
-        static constexpr float kTreeDrawingCanvasIndentScaleX = 0.005f;
-        static constexpr float kPatternInputFieldWidthScaleX  = 0.5f;
-        static constexpr float kIOBlocksIndentScaleX          = 0.005f;
-        static constexpr float kTextInputHeightScaleY         = 0.05f;
-        static constexpr float kTextInputIndentScaleY         = 0.005f;
-        static constexpr float kButtonDecreaseScale           = 2.0f;
-        static constexpr float kTextInputBoxWithScaleX        = 0.7f;
-        static constexpr int kNumberOfIOBlocks                = 2;
-
-        static_assert(kTreeDrawingCanvasScaleX +
-                          kTreeDrawingCanvasIndentScaleX +
-                          kIOBlocksIndentScaleX <
-                      1.0f);
-    };
-
-    enum class NodeStatus {
-        kOther = 0,
-        kAdded,
-        kSuffixLinksComputed,
-        kFoundSubstringInThisNode,
-    };
-    struct NodeState final {
-        ACTrieModel::VertexIndex node_parent_index;
-        NodeStatus status;
-        char parent_to_node_edge_symbol;
-    };
-
-    using EventType =
-        std::variant<UpdatedNodeInfo, FoundSubstringInfo, BadInputPatternInfo>;
-    // We use enum instead of enum class because
-    //  this constants are used to identify type
-    //  according to std::variant<...>::index()
-    //  (we need an implicit cast from std::size_t
-    //   to our enum and vice versa)
-    enum EventTypeIndex : std::size_t {
-        kUpdateNodeEventIndex      = 0,
-        kFoundSubstringEventIndex  = 1,
-        kBadInputPatternEventIndex = 2,
-    };
-
-    UpdatedNodeObserver updated_node_port_;
-    FoundSubstringObserver found_string_port_;
-    BadInputPatternObserver bad_input_port_;
+    void RecalculateNodePosition(VertexIndex node);
+    void VerifyXCoordsOfSiblingsOfNode(VertexIndex node_index,
+                                       float left_x_coord, float right_x_coord);
+    static void RecalculateAllNodesPositions(std::vector<NodeState>& nodes);
+    static void AlignNodesAboveLeafNodes(
+        std::vector<NodeState>& nodes,
+        std::vector<VertexIndex>&& leaf_node_indexes);
+    void DrawTerminalNodeSign(ImDrawList& draw_list, ImVec2 node_center);
+    void DrawEdgesBetweenNodeAndChildren(ImDrawList& draw_list,
+                                         VertexIndex node_index,
+                                         ImVec2 canvas_move_vector) const;
+    void DrawEdge(ImDrawList& draw_list, ImVec2 node_center,
+                  ImVec2 child_center, char edge_symbol,
+                  ImU32 edge_color = Palette::AsImU32::kBrightRedColor) const;
+    void DrawSuffixLinksForNode(ImDrawList& draw_list, VertexIndex node_index,
+                                ImVec2 canvas_move_vector) const;
+    UpdatedNodeObserver updated_node_in_port_;
+    FoundSubstringObserver found_substring_in_port_;
+    BadInputPatternObserver bad_input_in_port_;
+    PassingThroughObserver passing_through_in_port_;
     Observable<Pattern> user_pattern_input_port_;
     Observable<Text> user_text_input_port_;
     Observable<void, void> actrie_reset_port_;
     Observable<void, void> actrie_build_port_;
     std::deque<EventType> events_;
-    std::vector<ACTrieModel::ACTNode> model_nodes_;
-    std::map<ACTrieModel::VertexIndex, NodeState> nodes_status_;
+    EventParams::Time time_since_last_event_handled_;
+    std::vector<NodeState> nodes_;
     DrawerUtils::StringHistoryManager patterns_input_history_;
     DrawerUtils::StringHistoryManager texts_input_history_;
     std::vector<std::string> found_words_;
-    bool is_no_resize_                = false;
-    bool is_no_decoration_            = false;
-    bool is_window_rounding_disabled_ = false;
-    bool is_scroll_to_bottom_         = false;
-    bool is_auto_scroll_              = true;
-    bool is_inputing_text_            = false;
-    bool is_clear_button_pressed_     = false;
-    bool is_bad_symbol_found_         = false;
-    bool bad_symbol_modal_opened_     = false;
+    ImVec2 scroll_trie_canvas_coordinates_ =
+        CanvasParams::kInitialScrollingPosition;
+    VertexIndex passing_through_node_index_ = ACTrieModel::kNullNodeIndex;
+    VertexIndex found_word_node_index_      = ACTrieModel::kNullNodeIndex;
+    bool is_no_resize_                      = false;
+    bool is_no_decoration_                  = false;
+    bool is_window_rounding_disabled_       = false;
+    bool is_scroll_to_bottom_               = false;
+    bool is_auto_scroll_                    = true;
+    bool is_inputing_text_                  = false;
+    bool is_clear_button_pressed_           = false;
+    bool show_root_suffix_links_            = false;
+    bool show_root_compressed_suffix_links_ = false;
+    bool is_bad_symbol_found_               = false;
+    bool bad_symbol_modal_opened_           = false;
+    char bad_symbol_                        = '\0';
     std::string bad_pattern_;
     std::size_t bad_symbol_position_                     = 0;
-    char bad_symbol_                                     = '\0';
     static constexpr std::size_t kPatternInputBufferSize = 64;
-    std::string pattern_input_buffer_ =
-        std::string(kPatternInputBufferSize, '\0');
+    std::array<char, kPatternInputBufferSize> pattern_input_buffer_{'\0'};
     static constexpr std::size_t kTextInputBufferSize = 1024;
-    std::string text_input_buffer_ = std::string(kTextInputBufferSize, '\0');
+    std::vector<char> text_input_buffer_ =
+        std::vector<char>(kTextInputBufferSize, '\0');
 };
 
 }  // namespace AppSpace::GraphicsUtils
