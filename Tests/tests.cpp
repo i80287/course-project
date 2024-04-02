@@ -33,10 +33,15 @@ TestImplResult RunTests(
     const std::vector<std::pair<std::string_view, size_t>>&
         expected_occurances) {
     ACTrie actrie;
+    std::size_t patterns_total_length = 0;
     for (std::string_view pattern : patterns) {
         actrie.AddPattern(pattern);
+        patterns_total_length += pattern.size();
     }
     if (actrie.PatternsSize() != PatternsSize) {
+        return {false, {}, {}};
+    }
+    if (actrie.NodesSize() > patterns_total_length * std::size(patterns)) {
         return {false, {}, {}};
     }
 
