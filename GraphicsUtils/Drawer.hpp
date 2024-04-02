@@ -148,7 +148,7 @@ private:
     bool is_no_decoration_            = false;
     bool is_window_rounding_disabled_ = false;
     bool is_scroll_to_bottom_         = false;
-    bool is_auto_scroll_              = false;
+    bool is_auto_scroll_              = true;
     bool is_inputing_text_            = false;
     bool is_clear_button_pressed_     = false;
     bool is_bad_symbol_found_         = false;
