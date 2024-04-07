@@ -170,7 +170,7 @@ void Drawer::HandleNodeUpdate(const CopiedUpdatedNodeInfo& updated_node_info) {
                 .node                       = updated_node_info.node,
                 .parent_index               = parent_node_index,
                 .parent_to_node_edge_symbol = parent_to_node_edge_symbol,
-                .coordinates = TreeParams::kNodeInvalidCoordinates});
+            });
             assert(node_index == nodes_.size() - 1);
             switch (node_index) {
                 case ACTrieModel::kNullNodeIndex:
@@ -331,22 +331,27 @@ void Drawer::DrawACTrieTree(ImVec2 canvas_screen_pos, ImVec2 canvas_end_pos) {
             DrawTerminalNodeSign(draw_list, node_center);
         }
 
-        if (node_index == passing_through_node_index_) {
-            draw_list.AddCircle(node_center,
-                                TreeParams::kNodeRadius *
-                                    TreeParams::kPassingThroughRadiusScale,
-                                Palette::AsImU32::kYellowColor);
-        }
-        if (node_index == found_word_node_index_) {
+        DrawEdgesBetweenNodeAndChildren(draw_list, node_index,
+                                        canvas_move_vector);
+        DrawSuffixLinksForNode(draw_list, node_index, canvas_move_vector);
+    }
+
+    if (passing_through_node_index_ != ACTrieModel::kNullNodeIndex) {
+        assert(passing_through_node_index_ < nodes_.size());
+        const NodeState& node_state = nodes_[passing_through_node_index_];
+        assert(node_state.coordinates != TreeParams::kNodeInvalidCoordinates);
+        const ImVec2 node_center = node_state.coordinates + canvas_move_vector;
+        draw_list.AddCircle(
+            node_center,
+            TreeParams::kNodeRadius * TreeParams::kPassingThroughRadiusScale,
+            Palette::AsImU32::kYellowColor);
+
+        if (found_word_node_index_ == passing_through_node_index_) {
             draw_list.AddCircle(node_center,
                                 TreeParams::kNodeRadius *
                                     TreeParams::kPassingThroughRadiusScale,
                                 Palette::AsImU32::kOrangeColor);
         }
-
-        DrawEdgesBetweenNodeAndChildren(draw_list, node_index,
-                                        canvas_move_vector);
-        DrawSuffixLinksForNode(draw_list, node_index, canvas_move_vector);
     }
 }
 
@@ -610,15 +615,29 @@ void Drawer::TextInputImGuiCallback(ImGuiInputTextCallbackData& data) {
 }
 
 void Drawer::ClearStateAndNotify() {
-    is_inputing_text_        = false;
-    is_clear_button_pressed_ = false;
-    is_bad_symbol_found_     = false;
+    passing_through_node_index_        = ACTrieModel::kNullNodeIndex;
+    found_word_node_index_             = ACTrieModel::kNullNodeIndex;
+    is_no_resize_                      = false;
+    is_no_decoration_                  = false;
+    is_window_rounding_disabled_       = false;
+    is_scroll_to_bottom_               = false;
+    is_auto_scroll_                    = false;
+    is_inputing_text_                  = false;
+    is_clear_button_pressed_           = false;
+    show_root_suffix_links_            = false;
+    show_root_compressed_suffix_links_ = false;
+    is_bad_symbol_found_               = false;
+    bad_symbol_modal_opened_           = false;
+    bad_symbol_                        = '\0';
+    bad_pattern_.clear();
+    bad_symbol_position_ = 0;
     events_.clear();
     nodes_.clear();
     patterns_input_history_.Clear();
     texts_input_history_.Clear();
     found_words_.clear();
     ClearPatternInputBuffer();
+    ClearTextInputBuffer();
     actrie_reset_port_.Notify();
     logger.DebugLog("Cleared actrie");
 }
@@ -647,53 +666,38 @@ void Drawer::RecalculateAllNodesPositions(std::vector<NodeState>& nodes) {
     if (ACTrieModel::kRootIndex >= nodes.size()) {
         return;
     }
-    struct BFSPair {
-        VertexIndex node_index;
-        std::uint32_t bfs_depth;
-    };
-    std::deque<BFSPair> indexes_queue;
+
+    for (NodeState& node_state : nodes) {
+        node_state.coordinates = TreeParams::kNodeInvalidCoordinates;
+        node_state.leftest_child_x_coordinate =
+            TreeParams::kDefaultLeftestChildXCoordinate;
+        node_state.rightest_child_y_coordinate =
+            TreeParams::kDefaultRightestChildXCoordinate;
+    }
+
     std::vector<VertexIndex> leaf_node_indexes;
     leaf_node_indexes.reserve(nodes.size() / 2);
-    indexes_queue.push_back({ACTrieModel::kRootIndex, 0});
+    FindSortedLeafNodesAndComputeYCoords(ACTrieModel::kRootIndex, 0, nodes,
+                                         leaf_node_indexes);
+
     float leaf_nodes_x_coord = 0;
-    do {
-        const auto [node_index, node_bfs_depth] = indexes_queue.front();
-        indexes_queue.pop_front();
-        assert(node_index < nodes.size());
-        bool has_at_least_one_child = false;
-        for (VertexIndex child_index : nodes[node_index].node.edges) {
-            if (child_index == ACTrieModel::kNullNodeIndex) {
-                continue;
-            }
-            has_at_least_one_child = true;
-            indexes_queue.push_back({child_index, node_bfs_depth + 1});
-        }
-        if (!has_at_least_one_child) {
-            printf("%u -> %u via %c\n", nodes[node_index].parent_index,
-                   node_index, nodes[node_index].parent_to_node_edge_symbol);
-            leaf_nodes_x_coord += TreeParams::kNodeOffsetX;
-            leaf_nodes_x_coord += TreeParams::kNodeRadius;
-            nodes[node_index].coordinates.x = leaf_nodes_x_coord;
-            leaf_nodes_x_coord += TreeParams::kNodeRadius;
-            leaf_nodes_x_coord += TreeParams::kNodeOffsetX;
-            leaf_nodes_x_coord += TreeParams::kDeltaXBetweenNodes;
-            nodes[node_index].coordinates.y =
-                static_cast<float>(node_bfs_depth) *
-                TreeParams::kDeltaYBetweenNodeCenters;
-            if (leaf_node_indexes.empty() ||
-                leaf_node_indexes.back() != node_index) {
-                leaf_node_indexes.push_back(node_index);
-            }
-        }
-    } while (!indexes_queue.empty());
+    for (VertexIndex leaf_node_index : leaf_node_indexes) {
+        leaf_nodes_x_coord += TreeParams::kNodeOffsetX;
+        leaf_nodes_x_coord += TreeParams::kNodeRadius;
+        nodes[leaf_node_index].coordinates.x = leaf_nodes_x_coord;
+        leaf_nodes_x_coord += TreeParams::kNodeRadius;
+        leaf_nodes_x_coord += TreeParams::kNodeOffsetX;
+        leaf_nodes_x_coord += TreeParams::kDeltaXBetweenNodes;
+    }
+
     AlignNodesAboveLeafNodes(nodes, std::move(leaf_node_indexes));
 }
 
 void Drawer::AlignNodesAboveLeafNodes(
     std::vector<NodeState>& nodes,
     std::vector<VertexIndex>&& leaf_node_indexes) {
-    assert(std::unordered_set<VertexIndex>(leaf_node_indexes.begin(),
-                                           leaf_node_indexes.end())
+    assert(std::unordered_set<VertexIndex>(leaf_node_indexes.cbegin(),
+                                           leaf_node_indexes.cend())
                .size() == leaf_node_indexes.size());
 
     std::vector<VertexIndex> nodes_on_current_layer =
@@ -702,55 +706,97 @@ void Drawer::AlignNodesAboveLeafNodes(
     nodes_on_layer_above.reserve(nodes_on_current_layer.size());
 
     while (!nodes_on_current_layer.empty()) {
-        for (std::size_t i = 0; i < nodes_on_current_layer.size();) {
-            const VertexIndex leftmost_child_index = nodes_on_current_layer[i];
-            assert(leftmost_child_index < nodes.size());
-            const VertexIndex parent_index =
-                nodes[leftmost_child_index].parent_index;
-
-            float leftmost_x_coord  = nodes[leftmost_child_index].coordinates.x;
-            float rightmost_x_coord = leftmost_x_coord;
-            const float y_coord     = nodes[leftmost_child_index].coordinates.y;
-
-            auto node_has_same_parent =
-                [&nodes, parent_index](VertexIndex node_index) noexcept {
-                    return nodes[node_index].parent_index == parent_index;
-                };
-            std::size_t j = i;
-            while (j + 1 < nodes_on_current_layer.size() &&
-                   node_has_same_parent(nodes_on_current_layer[j + 1])) {
-                j++;
-                const auto [node_x_coord, node_y_coord] =
-                    nodes[nodes_on_current_layer[j]].coordinates;
-                assert(node_y_coord == y_coord);
-                leftmost_x_coord  = std::min(leftmost_x_coord, node_x_coord);
-                rightmost_x_coord = std::max(rightmost_x_coord, node_x_coord);
-            }
-            const VertexIndex rightmost_child_index = nodes_on_current_layer[j];
-            assert(rightmost_child_index < nodes.size());
-            assert(nodes[rightmost_child_index].parent_index == parent_index);
-
-            const float parent_x_coord =
-                (leftmost_x_coord + rightmost_x_coord) / 2;
-            const float parent_y_coord =
-                y_coord - TreeParams::kDeltaYBetweenNodeCenters;
-            nodes[parent_index].coordinates =
-                ImVec2(parent_x_coord, parent_y_coord);
-
-            assert(nodes_on_layer_above.empty() ||
-                   nodes_on_layer_above.back() != parent_index);
-            if (parent_index != ACTrieModel::kFakePreRootIndex) {
-                nodes_on_layer_above.push_back(parent_index);
-            } else {
-                assert(i == j);
-                assert(leftmost_child_index == rightmost_child_index);
-                assert(leftmost_child_index == ACTrieModel::kRootIndex);
-            }
-
-            i = j + 1;
-        }
+        FillAboveLayerCoordinatesUsingCurrentLayer(nodes, nodes_on_layer_above,
+                                                   nodes_on_current_layer);
         nodes_on_current_layer.swap(nodes_on_layer_above);
         nodes_on_layer_above.clear();
+    }
+}
+
+void Drawer::FillAboveLayerCoordinatesUsingCurrentLayer(
+    std::vector<NodeState>& nodes,
+    std::vector<VertexIndex>& nodes_on_layer_above,
+    const std::vector<VertexIndex>& nodes_on_current_layer) noexcept {
+    // At least nodes_on_current_layer.size() space should be reserved
+    //  in AlignNodesAboveLeafNodes.
+    assert(nodes_on_layer_above.capacity() >= nodes_on_current_layer.size());
+
+    for (std::size_t i = 0; i < nodes_on_current_layer.size();) {
+        const VertexIndex left_child_index = nodes_on_current_layer[i];
+        assert(left_child_index < nodes.size());
+        const VertexIndex parent_index = nodes[left_child_index].parent_index;
+        const float y_coord            = nodes[left_child_index].coordinates.y;
+
+        auto j = i + 1;
+        auto node_has_same_parent =
+            [&nodes, parent_index](VertexIndex node_index) noexcept {
+                return nodes[node_index].parent_index == parent_index;
+            };
+        while (j < nodes_on_current_layer.size() &&
+               node_has_same_parent(nodes_on_current_layer[j])) {
+            assert(nodes[nodes_on_current_layer[j]].coordinates.y == y_coord);
+            j++;
+        }
+
+        const VertexIndex right_child_index = nodes_on_current_layer[j - 1];
+        assert(right_child_index < nodes.size());
+        assert(nodes[right_child_index].parent_index == parent_index);
+
+        NodeState& parent_node = nodes[parent_index];
+        parent_node.coordinates.y =
+            y_coord - TreeParams::kDeltaYBetweenNodeCenters;
+
+        const float left_child_x  = nodes[left_child_index].coordinates.x;
+        const float right_child_x = nodes[right_child_index].coordinates.x;
+        assert(left_child_x != TreeParams::kNodeInvalidCoordinates.x);
+        assert(right_child_x != TreeParams::kNodeInvalidCoordinates.x);
+        assert(left_child_index == right_child_index ||
+               left_child_x < right_child_x);
+
+        parent_node.leftest_child_x_coordinate =
+            std::min(parent_node.leftest_child_x_coordinate, left_child_x);
+        parent_node.rightest_child_y_coordinate =
+            std::max(parent_node.rightest_child_y_coordinate, right_child_x);
+
+        if (parent_index != ACTrieModel::kFakePreRootIndex) {
+            nodes_on_layer_above.push_back(parent_index);
+        } else {
+            assert(left_child_index == right_child_index);
+            assert(left_child_index == ACTrieModel::kRootIndex);
+        }
+
+        assert(i < j);
+        i = j;
+    }
+
+    for (VertexIndex node_index : nodes_on_layer_above) {
+        assert(nodes[node_index].coordinates.y !=
+               TreeParams::kNodeInvalidCoordinates.y);
+        nodes[node_index].coordinates.x =
+            (nodes[node_index].leftest_child_x_coordinate +
+             nodes[node_index].rightest_child_y_coordinate) /
+            2;
+    }
+}
+
+void Drawer::FindSortedLeafNodesAndComputeYCoords(
+    VertexIndex start_node, uint32_t dfs_depth, std::vector<NodeState>& nodes,
+    std::vector<VertexIndex>& leaf_node_indexes) {
+    bool has_at_least_one_child = false;
+    assert(start_node < nodes.size());
+    for (VertexIndex child_node_index : nodes[start_node].node.edges) {
+        if (child_node_index == ACTrieModel::kNullNodeIndex) {
+            continue;
+        }
+        has_at_least_one_child = true;
+        FindSortedLeafNodesAndComputeYCoords(child_node_index, dfs_depth + 1,
+                                             nodes, leaf_node_indexes);
+    }
+
+    if (!has_at_least_one_child) {
+        nodes[start_node].coordinates.y = static_cast<float>(dfs_depth) *
+                                          TreeParams::kDeltaYBetweenNodeCenters;
+        leaf_node_indexes.push_back(start_node);
     }
 }
 

@@ -4,6 +4,7 @@
 
 #include <chrono>
 #include <deque>
+#include <limits>
 #include <map>
 #include <variant>
 
@@ -105,7 +106,11 @@ private:
                       kInitialScrollingPosition.y > 0);
     };
     struct TreeParams final {
-        static constexpr ImVec2 kNodeInvalidCoordinates   = ImVec2(-1, -1);
+        static constexpr ImVec2 kNodeInvalidCoordinates = ImVec2(-1, -1);
+        static constexpr float kDefaultLeftestChildXCoordinate =
+            std::numeric_limits<float>::max();
+        static constexpr float kDefaultRightestChildXCoordinate =
+            std::numeric_limits<float>::min();
         static constexpr ImVec2 kRootNodeCoordinates      = ImVec2(0, 0);
         static constexpr float kNodeRadius                = 15.0f;
         static constexpr float kPassingThroughRadiusScale = 0.8f;
@@ -134,7 +139,11 @@ private:
         ACTrieModel::ACTNode node;
         VertexIndex parent_index;
         char parent_to_node_edge_symbol;
-        ImVec2 coordinates;
+        ImVec2 coordinates = TreeParams::kNodeInvalidCoordinates;
+        float leftest_child_x_coordinate =
+            TreeParams::kDefaultLeftestChildXCoordinate;
+        float rightest_child_y_coordinate =
+            TreeParams::kDefaultRightestChildXCoordinate;
     };
     // same as ACTrie::UpdatedNodeInfo but with copied node.
     struct CopiedUpdatedNodeInfo final {
@@ -164,10 +173,6 @@ private:
         kFoundSubstringEventIndex  = 1,
         kBadInputPatternEventIndex = 2,
         kPassingThroughEventIndex  = 3,
-    };
-    struct LeafNodeInfo {
-        VertexIndex node_index;
-        VertexIndex parent_node_index;
     };
 
     void HandleNextEvent();
@@ -199,9 +204,17 @@ private:
     void VerifyXCoordsOfSiblingsOfNode(VertexIndex node_index,
                                        float left_x_coord, float right_x_coord);
     static void RecalculateAllNodesPositions(std::vector<NodeState>& nodes);
+    static void FindSortedLeafNodesAndComputeYCoords(
+        VertexIndex start_node, std::uint32_t dfs_depth,
+        std::vector<NodeState>& nodes,
+        std::vector<VertexIndex>& leaf_node_indexes);
     static void AlignNodesAboveLeafNodes(
         std::vector<NodeState>& nodes,
         std::vector<VertexIndex>&& leaf_node_indexes);
+    static void FillAboveLayerCoordinatesUsingCurrentLayer(
+        std::vector<NodeState>& nodes,
+        std::vector<VertexIndex>& nodes_on_layer_above,
+        const std::vector<VertexIndex>& nodes_on_current_layer) noexcept;
     void DrawTerminalNodeSign(ImDrawList& draw_list, ImVec2 node_center);
     void DrawEdgesBetweenNodeAndChildren(ImDrawList& draw_list,
                                          VertexIndex node_index,
@@ -211,6 +224,7 @@ private:
                   ImU32 edge_color = Palette::AsImU32::kBrightRedColor) const;
     void DrawSuffixLinksForNode(ImDrawList& draw_list, VertexIndex node_index,
                                 ImVec2 canvas_move_vector) const;
+
     UpdatedNodeObserver updated_node_in_port_;
     FoundSubstringObserver found_substring_in_port_;
     BadInputPatternObserver bad_input_in_port_;
@@ -219,6 +233,7 @@ private:
     Observable<Text> user_text_input_port_;
     Observable<void, void> actrie_reset_port_;
     Observable<void, void> actrie_build_port_;
+
     std::deque<EventType> events_;
     EventParams::Time time_since_last_event_handled_;
     std::vector<NodeState> nodes_;
