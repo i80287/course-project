@@ -63,12 +63,13 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
     endif()
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_definitions(vis_actrie_app PRIVATE
-        _GLIBCXX_DEBUG
-        _GLIBCXX_DEBUG_PEDANTIC
-    )
+    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+        target_compile_definitions(vis_actrie_app PRIVATE
+            _GLIBCXX_DEBUG
+            _GLIBCXX_DEBUG_PEDANTIC
+        )
+    endif()
     target_compile_options(vis_actrie_app PRIVATE
-        -fstack-protector-all
         -Wall
         -Wextra
         -Wlogical-op
