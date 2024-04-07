@@ -35,7 +35,12 @@ public:
     }
 
 private:
-    static constexpr bool kIsDebugLogEnabled = true;
+    static constexpr bool kIsDebugLogEnabled =
+#ifdef NDEBUG
+        false;
+#else
+        true;
+#endif
 };
 
 inline constexpr Logger logger;
