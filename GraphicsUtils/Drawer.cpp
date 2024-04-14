@@ -89,7 +89,9 @@ void Drawer::OnNewFrame() {
 // The technique for std::visit taken from the example on
 //  https://en.cppreference.com/w/cpp/utility/variant/visit
 template <class... Ts>
-struct overloaded : Ts... { using Ts::operator()...; };
+struct overloaded : Ts... {
+    using Ts::operator()...;
+};
 
 void Drawer::HandleNextEvent() {
     if (!events_.empty()) {
@@ -101,20 +103,24 @@ void Drawer::HandleNextEvent() {
         }
         time_since_last_event_handled_ = time_now;
 
-        std::visit(overloaded{
-            [this](const CopiedUpdatedNodeInfo& updated_node_info) {
-                HandleNodeUpdate(updated_node_info);
+        std::visit(
+            overloaded{
+                [this](const CopiedUpdatedNodeInfo& updated_node_info) {
+                    HandleNodeUpdate(updated_node_info);
+                },
+                [this](CopiedFoundSubstringInfo&& found_substring_info) {
+                    HandleFoundSubstring(std::move(found_substring_info));
+                },
+                [this](BadInputPatternInfoPassBy bad_input_info) {
+                    HandleBadPatternInput(
+                        std::forward<BadInputPatternInfo>(bad_input_info));
+                },
+                [this](PassingThroughInfoPassBy passing_through_info) {
+                    HandlePassingThrough(
+                        std::forward<PassingThroughInfo>(passing_through_info));
+                },
             },
-            [this](CopiedFoundSubstringInfo&& found_substring_info) {
-                HandleFoundSubstring(std::move(found_substring_info));
-            },
-            [this](BadInputPatternInfoPassBy bad_input_info) {
-                HandleBadPatternInput(std::forward<BadInputPatternInfo>(bad_input_info));
-            },
-            [this](PassingThroughInfoPassBy passing_through_info) {
-                HandlePassingThrough(std::forward<PassingThroughInfo>(passing_through_info));
-            },
-        }, std::move(events_.front()));
+            std::move(events_.front()));
         events_.pop_front();
     }
 }
@@ -224,7 +230,7 @@ void Drawer::HandleBadPatternInput(BadInputPatternInfoPassBy bad_symbol_info) {
 }
 
 void Drawer::HandlePassingThrough(PassingThroughInfo passing_info) {
-    logger.DebugLog("Passing through node ", std::to_string(passing_info));
+    logger.DebugLog("Passing through node ", passing_info);
     passing_through_node_index_ = passing_info;
 }
 

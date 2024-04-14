@@ -7,6 +7,10 @@ namespace AppSpace::GraphicsUtils::DrawerUtils {
 
 class Logger final {
 public:
+    static constexpr bool DebugModeEnabled() noexcept {
+        return kIsDebugLogEnabled;
+    }
+
     template <class T>
     void LogTypeName() const {
         std::clog << "[INFO] [type name: " << GetTypename<T>() << ']'
@@ -17,21 +21,19 @@ public:
                   const std::source_location location =
                       std::source_location::current()) const
         noexcept(!kIsDebugLogEnabled) {
-        if constexpr (kIsDebugLogEnabled) {
+        if constexpr (DebugModeEnabled()) {
             std::clog << "[DEBUG] [message: '" << msg
-                      << "'] [source: " << location.file_name()
-                      << ", line " << location.line() << ':'
-                      << location.column() << "] ["
+                      << "'] [source: " << location.file_name() << ", line "
+                      << location.line() << ':' << location.column() << "] ["
                       << location.function_name() << ']' << std::endl;
         }
     }
 
-    void DebugLog(std::string_view str1, std::string_view str2,
-                  char sep = '\0',
-                  const std::source_location location =
-                      std::source_location::current()) const
+    void DebugLog(
+        std::string_view str1, std::string_view str2, char sep = '\0',
+        std::source_location location = std::source_location::current()) const
         noexcept(!kIsDebugLogEnabled) {
-        if constexpr (kIsDebugLogEnabled) {
+        if constexpr (DebugModeEnabled()) {
             bool add_separator = sep != '\0';
             std::string s(str1.size() + add_separator + str2.size(), '\0');
             s += str1;
@@ -40,6 +42,16 @@ public:
             }
             s += str2;
             DebugLog(s, location);
+        }
+    }
+
+    template <class T>
+    void DebugLog(
+        std::string_view message, const T& arg,
+        std::source_location location = std::source_location::current()) const
+        noexcept(!kIsDebugLogEnabled) {
+        if constexpr (DebugModeEnabled()) {
+            DebugLog(message, std::to_string(arg), location);
         }
     }
 
