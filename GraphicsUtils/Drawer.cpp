@@ -86,6 +86,11 @@ void Drawer::OnNewFrame() {
     Draw();
 }
 
+// The technique for std::visit taken from the example on
+//  https://en.cppreference.com/w/cpp/utility/variant/visit
+template <class... Ts>
+struct overloaded : Ts... { using Ts::operator()...; };
+
 void Drawer::HandleNextEvent() {
     if (!events_.empty()) {
         const auto time_now = std::chrono::high_resolution_clock::now();
@@ -95,28 +100,22 @@ void Drawer::HandleNextEvent() {
             return;
         }
         time_since_last_event_handled_ = time_now;
-        EventType event                = std::move(events_.front());
+
+        std::visit(overloaded{
+            [this](const CopiedUpdatedNodeInfo& updated_node_info) {
+                HandleNodeUpdate(updated_node_info);
+            },
+            [this](CopiedFoundSubstringInfo&& found_substring_info) {
+                HandleFoundSubstring(std::move(found_substring_info));
+            },
+            [this](BadInputPatternInfoPassBy bad_input_info) {
+                HandleBadPatternInput(std::forward<BadInputPatternInfo>(bad_input_info));
+            },
+            [this](PassingThroughInfoPassBy passing_through_info) {
+                HandlePassingThrough(std::forward<PassingThroughInfo>(passing_through_info));
+            },
+        }, std::move(events_.front()));
         events_.pop_front();
-        switch (event.index()) {
-            case kUpdateNodeEventIndex:
-                HandleNodeUpdate(std::get<kUpdateNodeEventIndex>(event));
-                break;
-            case kFoundSubstringEventIndex:
-                HandleFoundSubstring(
-                    std::move(std::get<kFoundSubstringEventIndex>(event)));
-                break;
-            case kBadInputPatternEventIndex:
-                HandleBadPatternInput(std::forward<BadInputPatternInfoPassBy>(
-                    std::get<kBadInputPatternEventIndex>(event)));
-                break;
-            case kPassingThroughEventIndex:
-                HandlePassingThrough(
-                    std::get<kPassingThroughEventIndex>(event));
-                break;
-            default:
-                assert(false);
-                break;
-        }
     }
 }
 
