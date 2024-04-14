@@ -35,7 +35,7 @@ First of all, you should clone this repository using git. To do so, open termina
 
 Then, run the following command:
 
-    git clone --recursive https://github.com/i80287/course-project.git
+    git clone -b dev --recurse-submodules https://github.com/i80287/course-project.git
 
 After that, run the following command to change current directory and enter the new directory called 'course-project'
 
@@ -111,7 +111,7 @@ To change cmake configuration you can
 
 Далее, выполните следующую команду:
 
-    git clone --recursive https://github.com/i80287/course-project.git
+    git clone -b dev --recurse-submodules https://github.com/i80287/course-project.git
 
 After that, run the following command to change current directory and enter the new directory called 'course-project'
 
