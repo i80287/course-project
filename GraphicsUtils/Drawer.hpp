@@ -287,7 +287,7 @@ private:
     std::size_t bad_symbol_position_                     = 0;
     static constexpr std::size_t kPatternInputBufferSize = 64;
     std::array<char, kPatternInputBufferSize> pattern_input_buffer_{'\0'};
-    static constexpr std::size_t kTextInputBufferSize = 1024;
+    static constexpr std::size_t kTextInputBufferSize = 2048;
     std::vector<char> text_input_buffer_ =
         std::vector<char>(kTextInputBufferSize, '\0');
 };
