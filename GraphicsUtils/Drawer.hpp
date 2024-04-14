@@ -84,6 +84,7 @@ private:
         };
     };
     struct CanvasParams final {
+        static constexpr float kControllersWidthScaleX          = 1.0f / 4;
         static constexpr float kTreeDrawingCanvasScaleX         = 0.6f;
         static constexpr float kTreeDrawingCanvasScaleY         = 1.0f;
         static constexpr float kTreeDrawingCanvasIndentScaleX   = 0.005f;
@@ -99,11 +100,15 @@ private:
         static constexpr ImVec2 kInitialScrollingPosition = ImVec2(50, 50);
 
         static_assert(kTreeDrawingCanvasScaleX +
-                          kTreeDrawingCanvasIndentScaleX +
-                          kIOBlocksIndentScaleX <
-                      1.0f);
+                              kTreeDrawingCanvasIndentScaleX +
+                              kIOBlocksIndentScaleX <
+                          1.0f,
+                      "");
         static_assert(kInitialScrollingPosition.x > 0 &&
-                      kInitialScrollingPosition.y > 0);
+                          kInitialScrollingPosition.y > 0,
+                      "");
+        static_assert(kControllersWidthScaleX * 3 <= 1,
+                      "no place for 3 controllers");
     };
     struct TreeParams final {
         static constexpr ImVec2 kNodeInvalidCoordinates = ImVec2(-1, -1);
@@ -114,7 +119,7 @@ private:
         static constexpr ImVec2 kRootNodeCoordinates      = ImVec2(0, 0);
         static constexpr float kNodeRadius                = 15.0f;
         static constexpr float kPassingThroughRadiusScale = 0.8f;
-        static constexpr float kFoundSubstringRadiusScale = 0.6f;
+        static constexpr float kFoundSubstringRadiusScale = 0.5f;
         static constexpr float kNodeDiameter              = kNodeRadius * 2;
         static constexpr float kDeltaYBetweenNodeCenters  = 50.0f;
         static constexpr float kDeltaXBetweenNodes        = 5.0f;
@@ -122,18 +127,31 @@ private:
         static constexpr float kEdgeThickness             = 2.0f;
         static constexpr float kEdgeTextPositionScaleY    = 0.2f;
         static_assert(0 < kEdgeTextPositionScaleY &&
-                      kEdgeTextPositionScaleY < 0.5);
-        static_assert(kDeltaYBetweenNodeCenters > kNodeDiameter);
+                          kEdgeTextPositionScaleY < 0.5,
+                      "");
+        static_assert(kDeltaYBetweenNodeCenters > kNodeDiameter, "");
         static_assert(0 < kPassingThroughRadiusScale &&
-                      kPassingThroughRadiusScale < 1);
+                          kPassingThroughRadiusScale < 1,
+                      "");
         static_assert(0 < kFoundSubstringRadiusScale &&
-                      kFoundSubstringRadiusScale < 1);
-        static_assert(kFoundSubstringRadiusScale != kPassingThroughRadiusScale);
+                          kFoundSubstringRadiusScale < 1,
+                      "");
+        static_assert(kFoundSubstringRadiusScale != kPassingThroughRadiusScale,
+                      "");
     };
     struct EventParams final {
         using Time =
             std::chrono::time_point<std::chrono::high_resolution_clock>;
-        static constexpr auto kTimeDelay = std::chrono::nanoseconds(50'000'000);
+        static constexpr auto kMaxTimeDelay = std::chrono::milliseconds(200);
+        // We use 'int' instread of 'std::uint32_t" to match one to one
+        //  with ImGui function bool ImGui::SliderInt(const
+        //  char*,int*,int,int,const char*,ImGuiSliderFlags)
+        static constexpr int kMinSpeedUnit = 1;
+        static constexpr int kMaxSpeedUnit = 9;
+        static_assert(kMinSpeedUnit <= kMaxSpeedUnit, "");
+        static_assert(((kMaxSpeedUnit - kMinSpeedUnit) &
+                       ((kMaxSpeedUnit - kMinSpeedUnit) - 1)) == 0,
+                      "must be power of 2 for better performance");
     };
     struct NodeState final {
         ACTrieModel::ACTNode node;
@@ -218,12 +236,18 @@ private:
     void DrawTerminalNodeSign(ImDrawList& draw_list, ImVec2 node_center);
     void DrawEdgesBetweenNodeAndChildren(ImDrawList& draw_list,
                                          VertexIndex node_index,
-                                         ImVec2 canvas_move_vector) const;
+                                         ImVec2 canvas_move_vector,
+                                         ImVec2 canvas_start_pos,
+                                         ImVec2 canvas_end_pos) const;
     void DrawEdge(ImDrawList& draw_list, ImVec2 node_center,
                   ImVec2 child_center, char edge_symbol,
                   ImU32 edge_color = Palette::AsImU32::kBrightRedColor) const;
     void DrawSuffixLinksForNode(ImDrawList& draw_list, VertexIndex node_index,
-                                ImVec2 canvas_move_vector) const;
+                                ImVec2 canvas_move_vector,
+                                ImVec2 canvas_start_pos,
+                                ImVec2 canvas_end_pos) const;
+    static bool NodeFitsInCanvas(ImVec2 node_center, ImVec2 canvas_start_pos,
+                                 ImVec2 canvas_end_pos) noexcept;
 
     UpdatedNodeObserver updated_node_in_port_;
     FoundSubstringObserver found_substring_in_port_;
@@ -244,11 +268,14 @@ private:
         CanvasParams::kInitialScrollingPosition;
     VertexIndex passing_through_node_index_ = ACTrieModel::kNullNodeIndex;
     VertexIndex found_word_node_index_      = ACTrieModel::kNullNodeIndex;
+    int drawer_show_speed_                  = EventParams::kMinSpeedUnit;
     bool is_no_resize_                      = false;
     bool is_no_decoration_                  = false;
     bool is_window_rounding_disabled_       = false;
-    bool is_scroll_to_bottom_               = false;
-    bool is_auto_scroll_                    = true;
+    bool is_scroll_patterns_to_bottom_      = false;
+    bool is_patterns_auto_scroll_           = true;
+    bool is_scroll_found_words_to_bottom_   = false;
+    bool is_found_words_auto_scroll_        = true;
     bool is_inputing_text_                  = false;
     bool is_clear_button_pressed_           = false;
     bool show_root_suffix_links_            = false;

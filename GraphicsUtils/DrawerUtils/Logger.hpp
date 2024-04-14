@@ -51,7 +51,12 @@ public:
         std::source_location location = std::source_location::current()) const
         noexcept(!kIsDebugLogEnabled) {
         if constexpr (DebugModeEnabled()) {
-            DebugLog(message, std::to_string(arg), location);
+            if constexpr (std::is_same_v<T, std::string>) {
+                DebugLog(message, std::string_view(arg), '\0', location);
+            } else {
+                DebugLog(message, std::string_view(std::to_string(arg)), '\0',
+                         location);
+            }
         }
     }
 
