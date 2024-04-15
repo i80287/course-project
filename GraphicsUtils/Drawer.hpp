@@ -142,7 +142,7 @@ private:
     struct EventParams final {
         using Time =
             std::chrono::time_point<std::chrono::high_resolution_clock>;
-        static constexpr auto kMaxTimeDelay = std::chrono::milliseconds(200);
+        static constexpr auto kMaxTimeDelay = std::chrono::milliseconds(1000);
         // We use 'int' instread of 'std::uint32_t" to match one to one
         //  with ImGui function bool ImGui::SliderInt(const
         //  char*,int*,int,int,const char*,ImGuiSliderFlags)
