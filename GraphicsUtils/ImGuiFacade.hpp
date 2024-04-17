@@ -4,6 +4,8 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+#include <concepts>
+
 #include "GLFWFacade.hpp"
 
 namespace AppSpace::GraphicsUtils {
@@ -21,6 +23,14 @@ public:
     ImGuiFacade& operator=(const ImGuiFacade&) = delete;
     ImGuiFacade(ImGuiFacade&&)                 = delete;
     ImGuiFacade& operator=(ImGuiFacade&&)      = delete;
+    /// @brief This function will be called on every iteration of the runtime
+    /// loop.
+    //
+    //  This function is intentionally made with template argument
+    //   in order to help compiler inline it.
+    //  We do so instead of std::function<void()> because this is
+    //   the hot-path of the program.
+    /// @param new_frame_code
     void StartRuntimeLoop(auto new_frame_code) {
         while (!glfw_facade_.ShouldClose()) {
             RenderRuntimeLoopIteration(new_frame_code);
@@ -50,13 +60,8 @@ private:
     public:
         ImGuiBinder(const GLFWFacade& glfw_facade);
         ~ImGuiBinder();
-        void NewFrame() {
-            ImGui_ImplOpenGL3_NewFrame();
-            ImGui_ImplGlfw_NewFrame();
-        }
-        void RenderDrawData() {
-            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-        }
+        static void NewFrame();
+        static void RenderDrawData();
     };
 
     GLFWFacade glfw_facade_;

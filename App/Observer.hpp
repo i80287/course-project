@@ -4,15 +4,27 @@
 #include <functional>
 #include <list>
 #include <optional>
-
-#include "SendTypeHelper.hpp"
+#include <type_traits>
 
 namespace AppSpace {
 
-template <class TData, class SendTDataBy = SendTypeHelper<TData>>
+namespace ObserverDetail {
+template <class T>
+using SendTypeHelper =
+    std::conditional_t<std::is_scalar_v<T>, T,
+                       std::add_lvalue_reference_t<std::add_const_t<T>>>;
+
+}
+
+template <class TData,
+          class SendTDataBy = ObserverDetail::SendTypeHelper<TData>>
 class Observable;
 
-template <class TData, class SendTDataBy = SendTypeHelper<TData>>
+/// @brief Simple Mono Observer with 1 to 1 supported connection.
+/// @tparam TData
+/// @tparam SendTDataBy
+template <class TData,
+          class SendTDataBy = ObserverDetail::SendTypeHelper<TData>>
 class Observer final {
     friend class Observable<TData, SendTDataBy>;
     using ObservableType = Observable<TData, SendTDataBy>;
@@ -78,7 +90,7 @@ private:
     std::function<void()> on_notify_;
 };
 
-/// @brief Simple Observable with 1 to 1 supported connection.
+/// @brief Simple Mono Observable with 1 to 1 supported connection.
 /// @tparam TData
 /// @tparam SendTDataBy
 template <class TData, class SendTDataBy>

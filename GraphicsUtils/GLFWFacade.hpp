@@ -16,6 +16,8 @@ public:
     void ClearWindow() const noexcept;
 
 private:
+    static constexpr int kGLFWSwapInterval = 1;
+
     class GLFWInitializer final {
     public:
         GLFWInitializer();
@@ -30,14 +32,14 @@ private:
                                       const char* description) noexcept;
     };
 
-    class WindowManager final {
+    class GLFWwindowHolder final {
     public:
-        WindowManager(int width, int height, const char* title);
-        ~WindowManager();
-        WindowManager(const WindowManager&)            = delete;
-        WindowManager(WindowManager&&)                 = delete;
-        WindowManager& operator=(const WindowManager&) = delete;
-        WindowManager& operator=(WindowManager&&)      = delete;
+        GLFWwindowHolder(int width, int height, const char* title);
+        ~GLFWwindowHolder();
+        GLFWwindowHolder(const GLFWwindowHolder&)            = delete;
+        GLFWwindowHolder(GLFWwindowHolder&&)                 = delete;
+        GLFWwindowHolder& operator=(const GLFWwindowHolder&) = delete;
+        GLFWwindowHolder& operator=(GLFWwindowHolder&&)      = delete;
 
         constexpr GLFWwindow* GetWindow() const noexcept {
             return window_;
@@ -49,8 +51,10 @@ private:
 
     bool TryLoadGLFW() const noexcept;
 
+    /// @brief Class `GLFWwindowHolder` depends on `GLFWInitializer`
+    //          so order of the fields is very important here.
     GLFWInitializer initializer_;
-    WindowManager window_manager_;
+    GLFWwindowHolder window_manager_;
 };
 
 constexpr GLFWwindow* GLFWFacade::GetWindow() const noexcept {

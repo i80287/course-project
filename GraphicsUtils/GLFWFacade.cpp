@@ -5,13 +5,17 @@
 
 namespace AppSpace::GraphicsUtils {
 
+/// @brief Class `GLFWwindowHolder` depends on `GLFWInitializer`
+///         so order of the fields initialization is very important here.
+/// @param window_width
+/// @param window_height
+/// @param window_title
 GLFWFacade::GLFWFacade(int window_width, int window_height,
                        const char* window_title)
     : initializer_(),
       window_manager_(window_width, window_height, window_title) {
     glfwMakeContextCurrent(GetWindow());
-    constexpr int kSwapInterval = 1;
-    glfwSwapInterval(kSwapInterval);
+    glfwSwapInterval(kGLFWSwapInterval);
     if (!TryLoadGLFW()) {
         throw std::runtime_error("Failed to initialize OpenGL context");
     }
@@ -74,15 +78,15 @@ GLFWFacade::GLFWInitializer::~GLFWInitializer() {
     glfwTerminate();
 }
 
-GLFWFacade::WindowManager::WindowManager(int width, int height,
-                                         const char* title)
+GLFWFacade::GLFWwindowHolder::GLFWwindowHolder(int width, int height,
+                                               const char* title)
     : window_(glfwCreateWindow(width, height, title, nullptr, nullptr)) {
     if (window_ == nullptr) {
         throw std::runtime_error("Unable to create window");
     }
 }
 
-GLFWFacade::WindowManager::~WindowManager() {
+GLFWFacade::GLFWwindowHolder::~GLFWwindowHolder() {
     glfwDestroyWindow(window_);
 }
 

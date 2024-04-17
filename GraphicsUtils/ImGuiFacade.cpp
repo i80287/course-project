@@ -26,7 +26,9 @@ void ImGuiFacade::ImGuiContextManager::EnableKeyboardControls() {
 
 ImGuiFacade::ImGuiBinder::ImGuiBinder(const GLFWFacade& glfw_facade) {
     // Setup Platform/Renderer bindings
-    if (!ImGui_ImplGlfw_InitForOpenGL(glfw_facade.GetWindow(), true) ||
+    bool install_callbacks = true;
+    if (!ImGui_ImplGlfw_InitForOpenGL(glfw_facade.GetWindow(),
+                                      install_callbacks) ||
         !ImGui_ImplOpenGL3_Init()) {
         throw std::runtime_error(
             "Unable to bind imgui context to glfw opengl3 context");
@@ -36,6 +38,15 @@ ImGuiFacade::ImGuiBinder::ImGuiBinder(const GLFWFacade& glfw_facade) {
 ImGuiFacade::ImGuiBinder::~ImGuiBinder() {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
+}
+
+void ImGuiFacade::ImGuiBinder::NewFrame() {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+}
+
+void ImGuiFacade::ImGuiBinder::RenderDrawData() {
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 }  // namespace AppSpace::GraphicsUtils

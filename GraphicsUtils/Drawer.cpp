@@ -544,7 +544,7 @@ void Drawer::DrawBadSymbolWindow() {
     ImGui::BeginPopupModal(kBadSymbolModalName);
     bad_symbol_modal_opened_ = true;
     if (is_bad_symbol_found_) {
-        bad_pattern_ = patterns_input_history_.MoveAndPopLast();
+        bad_pattern_ = patterns_input_history_.PopAndGetLast();
     }
     ImGui::Text(
         "Incorrect symbol '%c' passed in the pattern %s at position %zu",

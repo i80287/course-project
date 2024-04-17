@@ -14,6 +14,17 @@ void StringHistoryManager::PopLast() noexcept {
     history_.pop_back();
 }
 
+std::string StringHistoryManager::PopAndGetLast() noexcept {
+    assert(!Empty());
+    std::string last_elem(std::move(history_.back()));
+    history_.pop_back();
+    return last_elem;
+}
+
+void StringHistoryManager::Clear() noexcept {
+    history_.clear();
+}
+
 std::string_view StringHistoryManager::MoveToPreviousInputAndRead() noexcept {
     assert(!Empty());
     current_history_position_--;

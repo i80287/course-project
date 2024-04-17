@@ -16,7 +16,7 @@ App::App() : model_controller_(model_) {
 }
 
 void App::Run() {
-    imgui_facade_.StartRuntimeLoop([this]() { view_.OnNewFrame(); });
+    imgui_facade_.StartRuntimeLoop([&view = view_]() { view.OnNewFrame(); });
 }
 
 }  // namespace AppSpace
