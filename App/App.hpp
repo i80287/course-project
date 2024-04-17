@@ -17,8 +17,8 @@ public:
     void Run();
 
 private:
-    GraphicsUtils::ImGuiFacade imgui_facade_;
-    GraphicsUtils::Drawer view_;
+    ImGuiFacade imgui_facade_;
+    Drawer view_;
     ModelType model_;
     ACTrieController model_controller_;
 };
