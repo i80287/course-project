@@ -451,5 +451,9 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 
+# JetBrains CLion
+.idea/*
+.cmake-build-debug/*
+
 # imgui init file
 *.ini
