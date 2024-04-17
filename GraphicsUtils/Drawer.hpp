@@ -109,7 +109,7 @@ private:
         static_assert(kFoundSubstringRadiusScale != kPassingThroughRadiusScale,
                       "");
     };
-    struct EventParams final {
+    struct DrawerEventHandlingDelayParams final {
         using Time =
             std::chrono::time_point<std::chrono::high_resolution_clock>;
         static constexpr auto kMaxTimeDelay = std::chrono::milliseconds(1000);
@@ -226,7 +226,7 @@ private:
     Observable<void, void> actrie_build_port_;
 
     std::deque<EventType> events_;
-    EventParams::Time time_since_last_event_handled_;
+    DrawerEventHandlingDelayParams::Time time_since_last_event_handled_;
     std::vector<NodeState> nodes_;
     DrawerUtils::StringHistoryManager patterns_input_history_;
     DrawerUtils::StringHistoryManager texts_input_history_;
@@ -235,7 +235,7 @@ private:
         CanvasParams::kInitialScrollingPosition;
     VertexIndex passing_through_node_index_ = ACTrieModel::kNullNodeIndex;
     VertexIndex found_word_node_index_      = ACTrieModel::kNullNodeIndex;
-    int drawer_show_speed_                  = EventParams::kMinSpeedUnit;
+    int drawer_show_speed_                  = DrawerEventHandlingDelayParams::kMinSpeedUnit;
     bool is_no_resize_                      = false;
     bool is_no_decoration_                  = false;
     bool is_window_rounding_disabled_       = false;

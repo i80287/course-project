@@ -106,12 +106,12 @@ void Drawer::HandleNextEvent() {
     const std::chrono::nanoseconds time_since_last_event =
         time_now - time_since_last_event_handled_;
 
-    assert(EventParams::kMinSpeedUnit <= drawer_show_speed_);
-    assert(drawer_show_speed_ <= EventParams::kMaxSpeedUnit);
+    assert(DrawerEventHandlingDelayParams::kMinSpeedUnit <= drawer_show_speed_);
+    assert(drawer_show_speed_ <= DrawerEventHandlingDelayParams::kMaxSpeedUnit);
     const auto delay =
-        EventParams::kMaxTimeDelay *
-        (EventParams::kMaxSpeedUnit - drawer_show_speed_) /
-        (EventParams::kMaxSpeedUnit - EventParams::kMinSpeedUnit);
+        DrawerEventHandlingDelayParams::kMaxTimeDelay *
+        (DrawerEventHandlingDelayParams::kMaxSpeedUnit - drawer_show_speed_) /
+        (DrawerEventHandlingDelayParams::kMaxSpeedUnit - DrawerEventHandlingDelayParams::kMinSpeedUnit);
     if (time_since_last_event <= delay) {
         return;
     }
@@ -332,8 +332,8 @@ void Drawer::DrawACTrieTree(ImVec2 canvas_screen_pos, ImVec2 canvas_end_pos) {
 
     ImGui::PushItemWidth(available_width *
                          CanvasParams::kControllersWidthScaleX);
-    ImGui::SliderInt("Speed", &drawer_show_speed_, EventParams::kMinSpeedUnit,
-                     EventParams::kMaxSpeedUnit);
+    ImGui::SliderInt("Speed", &drawer_show_speed_, DrawerEventHandlingDelayParams::kMinSpeedUnit,
+                     DrawerEventHandlingDelayParams::kMaxSpeedUnit);
     if (is_inputting_text_) {
         ImGui::SameLine();
         ImGui::Checkbox("Show suffix links to root", &show_root_suffix_links_);
@@ -687,7 +687,7 @@ void Drawer::TextInputImGuiCallback(ImGuiInputTextCallbackData& data) {
 }
 
 void Drawer::ClearStateAndNotify() {
-    drawer_show_speed_                 = EventParams::kMinSpeedUnit;
+    drawer_show_speed_                 = DrawerEventHandlingDelayParams::kMinSpeedUnit;
     passing_through_node_index_        = ACTrieModel::kNullNodeIndex;
     found_word_node_index_             = ACTrieModel::kNullNodeIndex;
     is_no_resize_                      = false;
