@@ -1,11 +1,8 @@
 #include "ACTrie.hpp"
 
+#include <algorithm>
 #include <cassert>
-#include <cctype>
-#include <cstdio>
-#include <exception>
 #include <iterator>
-#include <string>
 #include <string_view>
 
 namespace AppSpace::ACTrieDS {
@@ -212,7 +209,7 @@ bool ACTrie::IsACTrieInCorrectState() const {
     if (nodes_.size() < kInitialNodesCount) {
         return false;
     }
-    if (!IsFakePrerootInCorrectState()) {
+    if (!IsFakePreRootNodeInCorrectState()) {
         return false;
     }
 
@@ -239,7 +236,7 @@ bool ACTrie::IsACTrieInCorrectState() const {
     return true;
 }
 
-bool ACTrie::IsFakePrerootInCorrectState() const {
+bool ACTrie::IsFakePreRootNodeInCorrectState() const {
     const auto& edges = nodes_[kFakePreRootIndex].edges;
     return std::all_of(edges.begin(), edges.end(), [](VertexIndex child_index) {
         return child_index == kRootIndex;

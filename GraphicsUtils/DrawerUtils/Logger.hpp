@@ -10,19 +10,18 @@ public:
     static constexpr bool DebugModeEnabled() noexcept;
     template <class T>
     void LogTypeName() const;
-    void DebugLog(std::string_view msg,
-                  std::source_location location =
-                      std::source_location::current()) const
+    void DebugLog(
+        std::string_view msg,
+        std::source_location location = std::source_location::current()) const
         noexcept(!kIsDebugLogEnabled);
-    void DebugLog(std::string_view str1, std::string_view str2,
-                  char sep = '\0',
-                  std::source_location location =
-                      std::source_location::current()) const
+    void DebugLog(
+        std::string_view str1, std::string_view str2, char sep = '\0',
+        std::source_location location = std::source_location::current()) const
         noexcept(!kIsDebugLogEnabled);
     template <class T>
-    void DebugLog(std::string_view message, const T& arg,
-                  std::source_location location =
-                      std::source_location::current()) const
+    void DebugLog(
+        std::string_view message, const T& arg,
+        std::source_location location = std::source_location::current()) const
         noexcept(!kIsDebugLogEnabled);
 
 private:
@@ -61,8 +60,7 @@ constexpr bool Logger::DebugModeEnabled() noexcept {
 
 template <class T>
 void Logger::LogTypeName() const {
-    std::clog << "[INFO] [type name: " << GetTypeName<T>() << ']'
-              << std::endl;
+    std::clog << "[INFO] [type name: " << GetTypeName<T>() << ']' << std::endl;
 }
 
 template <class T>
@@ -75,8 +73,8 @@ void Logger::DebugLog(std::string_view message, const T& arg,
             if constexpr (std::is_same_v<T, std::string>) {
                 DebugLog(message, std::string_view(arg), '\0', location);
             } else {
-                DebugLog(message, std::string_view(std::to_string(arg)),
-                         '\0', location);
+                DebugLog(message, std::string_view(std::to_string(arg)), '\0',
+                         location);
             }
     }
 }

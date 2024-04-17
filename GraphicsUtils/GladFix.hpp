@@ -3,7 +3,7 @@
 /**
  * It is a helper header file that prevents clang-format
  * from reordering the two includes described below.
- * (if they are written sequentially, they will be reodered by the
+ * (if they are written sequentially, they will be reordered by the
  * clang-format)
  */
 

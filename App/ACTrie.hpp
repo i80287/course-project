@@ -21,7 +21,7 @@ public:
     using Pattern     = std::string_view;
     using Text        = std::string_view;
 
-    static constexpr bool kIsCaseInsensetive = false;
+    static constexpr bool kIsCaseInsensitive = false;
     static constexpr char kAlphabetStart     = 'A';
     static constexpr char kAlphabetEnd       = 'z';
     static constexpr std::size_t kAlphabetLength =
@@ -124,7 +124,7 @@ private:
     void ComputeLinksForNodeChildren(VertexIndex node_index,
                                      std::queue<VertexIndex>& queue);
     bool IsACTrieInCorrectState() const;
-    bool IsFakePrerootInCorrectState() const;
+    bool IsFakePreRootNodeInCorrectState() const;
     void NotifyAboutAddedNode(VertexIndex added_node_index,
                               VertexIndex parent_node_index,
                               char parent_to_node_edge_symbol);
@@ -156,7 +156,7 @@ constexpr std::size_t ACTrie::PatternsSize() const noexcept {
 
 constexpr ACTrie::VertexIndex ACTrie::SymbolToIndex(char symbol) noexcept {
     std::int32_t symbol_as_int = static_cast<std::uint8_t>(symbol);
-    if constexpr (kIsCaseInsensetive) {
+    if constexpr (kIsCaseInsensitive) {
         symbol_as_int = std::tolower(symbol_as_int);
     }
 

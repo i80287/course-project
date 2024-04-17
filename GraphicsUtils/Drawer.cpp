@@ -102,7 +102,8 @@ void Drawer::HandleNextEvent() {
         assert(EventParams::kMinSpeedUnit <= drawer_show_speed_);
         assert(drawer_show_speed_ <= EventParams::kMaxSpeedUnit);
         const auto delay =
-            EventParams::kMaxTimeDelay * (EventParams::kMaxSpeedUnit - drawer_show_speed_) /
+            EventParams::kMaxTimeDelay *
+            (EventParams::kMaxSpeedUnit - drawer_show_speed_) /
             (EventParams::kMaxSpeedUnit - EventParams::kMinSpeedUnit);
         if (time_since_last_event <= delay) {
             return;
@@ -311,7 +312,7 @@ void Drawer::DrawACTrieTree(ImVec2 canvas_screen_pos, ImVec2 canvas_end_pos) {
                          CanvasParams::kControllersWidthScaleX);
     ImGui::SliderInt("Speed", &drawer_show_speed_, EventParams::kMinSpeedUnit,
                      EventParams::kMaxSpeedUnit);
-    if (is_inputing_text_) {
+    if (is_inputting_text_) {
         ImGui::SameLine();
         ImGui::Checkbox("Show suffix links to root", &show_root_suffix_links_);
         ImGui::SameLine();
@@ -466,12 +467,12 @@ void Drawer::DrawPatternInputBlock(ImVec2 block_start_pos,
     }
 
     ImGui::EndChild();
-    if (!is_inputing_text_) {
+    if (!is_inputting_text_) {
         bool reclaim_focus =
             AddPatternInput(scrolling_region_size.x *
                             CanvasParams::kPatternInputFieldWidthScaleX);
         ImGui::SetItemDefaultFocus();
-        // Auto-focus on window apparition
+        // Autofocus on window apparition
         if (reclaim_focus) {
             ImGui::SetKeyboardFocusHere(-1);
         }
@@ -516,21 +517,21 @@ void Drawer::DrawFoundWordsBlock(ImVec2 block_start_pos, ImVec2 block_end_pos) {
 
 void Drawer::DrawTextInputBlock(ImVec2 block_start_pos, ImVec2 block_end_pos) {
     ImGui::SetCursorScreenPos(block_start_pos);
-    if (is_inputing_text_) {
+    if (is_inputting_text_) {
         const float text_input_box_width =
             (block_end_pos.x - block_start_pos.x) *
             CanvasParams::kTextInputBoxWithScaleX;
         bool reclaim_focus = AddTextInput(text_input_box_width);
         ImGui::SetItemDefaultFocus();
-        // Auto-focus on window apparition
+        // Autofocus on window apparition
         if (reclaim_focus) {
             ImGui::SetKeyboardFocusHere(-1);
         }
     } else {
         const ImVec2 button_size = (block_end_pos - block_start_pos) /
                                    CanvasParams::kButtonDecreaseScale;
-        is_inputing_text_ = ImGui::Button("Build AC trie", button_size);
-        if (is_inputing_text_) {
+        is_inputting_text_ = ImGui::Button("Build AC trie", button_size);
+        if (is_inputting_text_) {
             actrie_build_port_.Notify();
             logger.DebugLog("User built AC trie");
         }
@@ -674,7 +675,7 @@ void Drawer::ClearStateAndNotify() {
     is_patterns_auto_scroll_           = true;
     is_scroll_found_words_to_bottom_   = false;
     is_found_words_auto_scroll_        = true;
-    is_inputing_text_                  = false;
+    is_inputting_text_                 = false;
     is_clear_button_pressed_           = false;
     show_root_suffix_links_            = false;
     show_root_compressed_suffix_links_ = false;

@@ -2,8 +2,7 @@
 
 namespace AppSpace::GraphicsUtils::DrawerUtils {
 
-void Logger::DebugLog(std::string_view msg,
-                      std::source_location location) const
+void Logger::DebugLog(std::string_view msg, std::source_location location) const
     noexcept(!kIsDebugLogEnabled) {
     if constexpr (DebugModeEnabled()) {
         std::clog << "[DEBUG] [message: '" << msg
@@ -13,8 +12,8 @@ void Logger::DebugLog(std::string_view msg,
     }
 }
 
-void Logger::DebugLog(std::string_view str1, std::string_view str2,
-                      char sep, std::source_location location) const
+void Logger::DebugLog(std::string_view str1, std::string_view str2, char sep,
+                      std::source_location location) const
     noexcept(!kIsDebugLogEnabled) {
     if constexpr (DebugModeEnabled()) {
         bool add_separator = sep != '\0';

@@ -145,7 +145,8 @@ private:
         static constexpr auto kMaxTimeDelay = std::chrono::milliseconds(1000);
         // We use 'int' instead of 'std::uint32_t' or 'std::int32_t'
         //  to match one to one with the following ImGui function:
-        // bool ImGui::SliderInt(const char*,int*,int,int,const char*,ImGuiSliderFlags)
+        // bool ImGui::SliderInt(const char*,int*,int,int,const
+        // char*,ImGuiSliderFlags)
         static constexpr int kMinSpeedUnit = 1;
         static constexpr int kMaxSpeedUnit = 9;
         static_assert(kMinSpeedUnit <= kMaxSpeedUnit, "");
@@ -181,17 +182,6 @@ private:
     using EventType =
         std::variant<CopiedUpdatedNodeInfo, CopiedFoundSubstringInfo,
                      BadInputPatternInfo, PassingThroughInfo>;
-    // We use enum instead of enum class because
-    //  this constants are used to identify type
-    //  according to std::variant<...>::index()
-    //  (we need an implicit cast from std::size_t
-    //   to our enum and vice versa)
-    enum EventTypeIndex : std::size_t {
-        kUpdateNodeEventIndex      = 0,
-        kFoundSubstringEventIndex  = 1,
-        kBadInputPatternEventIndex = 2,
-        kPassingThroughEventIndex  = 3,
-    };
 
     void HandleNextEvent();
     void SetupImGuiStyle();
@@ -249,6 +239,9 @@ private:
     static bool NodeFitsInCanvas(ImVec2 node_center, ImVec2 canvas_start_pos,
                                  ImVec2 canvas_end_pos) noexcept;
 
+    static constexpr std::size_t kPatternInputBufferSize = 64;
+    static constexpr std::size_t kTextInputBufferSize    = 2048;
+
     UpdatedNodeObserver updated_node_in_port_;
     FoundSubstringObserver found_substring_in_port_;
     BadInputPatternObserver bad_input_in_port_;
@@ -276,7 +269,7 @@ private:
     bool is_patterns_auto_scroll_           = true;
     bool is_scroll_found_words_to_bottom_   = false;
     bool is_found_words_auto_scroll_        = true;
-    bool is_inputing_text_                  = false;
+    bool is_inputting_text_                 = false;
     bool is_clear_button_pressed_           = false;
     bool show_root_suffix_links_            = false;
     bool show_root_compressed_suffix_links_ = false;
@@ -284,10 +277,9 @@ private:
     bool bad_symbol_modal_opened_           = false;
     char bad_symbol_                        = '\0';
     std::string bad_pattern_;
-    std::size_t bad_symbol_position_                     = 0;
-    static constexpr std::size_t kPatternInputBufferSize = 64;
-    std::array<char, kPatternInputBufferSize> pattern_input_buffer_{'\0'};
-    static constexpr std::size_t kTextInputBufferSize = 2048;
+    std::size_t bad_symbol_position_ = 0;
+    std::vector<char> pattern_input_buffer_ =
+        std::vector<char>(kPatternInputBufferSize, '\0');
     std::vector<char> text_input_buffer_ =
         std::vector<char>(kTextInputBufferSize, '\0');
 };
