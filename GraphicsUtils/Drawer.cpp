@@ -101,9 +101,8 @@ void Drawer::HandleNextEvent() {
 
         assert(EventParams::kMinSpeedUnit <= drawer_show_speed_);
         assert(drawer_show_speed_ <= EventParams::kMaxSpeedUnit);
-        const auto speed = static_cast<std::uint32_t>(drawer_show_speed_);
         const auto delay =
-            EventParams::kMaxTimeDelay * (EventParams::kMaxSpeedUnit - speed) /
+            EventParams::kMaxTimeDelay * (EventParams::kMaxSpeedUnit - drawer_show_speed_) /
             (EventParams::kMaxSpeedUnit - EventParams::kMinSpeedUnit);
         if (time_since_last_event <= delay) {
             return;
@@ -911,10 +910,10 @@ void Drawer::DrawEdge(ImDrawList& draw_list, ImVec2 node_center,
         const std::string_view edge_text_sv = edge_text;
         const ImVec2 edge_center_pos =
             ImVecMiddle(edge_start_pos, edge_end_pos);
-        const float edge_rectanle_height = edge_end_pos.y - edge_start_pos.y;
+        const float edge_rectangle_height = edge_end_pos.y - edge_start_pos.y;
         const ImVec2 text_pos =
             ImVec2(edge_center_pos.x,
-                   edge_center_pos.y - edge_rectanle_height *
+                   edge_center_pos.y - edge_rectangle_height *
                                            TreeParams::kEdgeTextPositionScaleY);
         draw_list.AddText(text_pos, Palette::AsImU32::kGreenColor,
                           edge_text_sv.begin(), edge_text_sv.end());

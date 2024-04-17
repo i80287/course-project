@@ -2,7 +2,7 @@
 
 /**
  * It is a helper header file that prevents clang-format
- * from reodering the two includes described below.
+ * from reordering the two includes described below.
  * (if they are written sequentially, they will be reodered by the
  * clang-format)
  */

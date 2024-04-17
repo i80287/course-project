@@ -143,9 +143,9 @@ private:
         using Time =
             std::chrono::time_point<std::chrono::high_resolution_clock>;
         static constexpr auto kMaxTimeDelay = std::chrono::milliseconds(1000);
-        // We use 'int' instread of 'std::uint32_t" to match one to one
-        //  with ImGui function bool ImGui::SliderInt(const
-        //  char*,int*,int,int,const char*,ImGuiSliderFlags)
+        // We use 'int' instead of 'std::uint32_t' or 'std::int32_t'
+        //  to match one to one with the following ImGui function:
+        // bool ImGui::SliderInt(const char*,int*,int,int,const char*,ImGuiSliderFlags)
         static constexpr int kMinSpeedUnit = 1;
         static constexpr int kMaxSpeedUnit = 9;
         static_assert(kMinSpeedUnit <= kMaxSpeedUnit, "");
