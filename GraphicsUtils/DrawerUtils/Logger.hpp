@@ -68,14 +68,12 @@ void Logger::DebugLog(std::string_view message, const T& arg,
                       std::source_location location) const
     noexcept(!kIsDebugLogEnabled) {
     if constexpr (DebugModeEnabled()) {
-        if constexpr (std::is_constructible_v<std::string_view, const T&>)
-
-            if constexpr (std::is_same_v<T, std::string>) {
-                DebugLog(message, std::string_view(arg), '\0', location);
-            } else {
-                DebugLog(message, std::string_view(std::to_string(arg)), '\0',
-                         location);
-            }
+        if constexpr (std::is_constructible_v<std::string_view, const T&>) {
+            DebugLog(message, std::string_view(arg), '\0', location);
+        } else {
+            DebugLog(message, std::string_view(std::to_string(arg)), '\0',
+                     location);
+        }
     }
 }
 

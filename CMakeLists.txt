@@ -23,6 +23,7 @@ add_executable(vis_actrie_app
     App/React.cpp
     GraphicsUtils/Drawer.cpp
     GraphicsUtils/DrawerUtils/StringHistoryManager.cpp
+    GraphicsUtils/DrawerUtils/Logger.cpp
     GraphicsUtils/GLFWFacade.cpp
     GraphicsUtils/ImGuiFacade.cpp
     "${IMGUI_BACKENDS_DIR}/imgui_impl_glfw.cpp"
