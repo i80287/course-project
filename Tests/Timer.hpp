@@ -9,16 +9,16 @@ namespace chrono = std::chrono;
 class Timer final {
     using TimePoint = chrono::time_point<chrono::high_resolution_clock>;
 public:
-    using Duration = TimePoint::duration;
+    using Duration = std::chrono::milliseconds;
 
     Timer() noexcept : time_(chrono::high_resolution_clock::now()) {}
     Duration TimePassed() noexcept {
-        return chrono::high_resolution_clock::now() - time_;
+        return chrono::duration_cast<Duration>(chrono::high_resolution_clock::now() - time_);
     }
     Duration GetAndResetTime() noexcept {
         TimePoint time_point = time_;
         time_                = chrono::high_resolution_clock::now();
-        return time_ - time_point;
+        return chrono::duration_cast<Duration>(time_ - time_point);
     }
 
 private:

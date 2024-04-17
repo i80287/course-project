@@ -9,21 +9,25 @@
 
 namespace AppSpace {
 
+namespace {
+
 using ACTrie = ACTrieDS::ACTrie;
 
+enum class TestStatus { kPassed, kNotPassed };
+
 struct TestImplResult final {
-    bool passed;
+    TestStatus status;
     std::size_t expected_occurances_size;
-    Timer::Duration time_passed;
+    Timer::Duration time_passed_millis;
 };
 
 struct TestResult final {
-    bool passed;
+    TestStatus status;
     std::size_t found_occurances_size;
     std::size_t expected_occurances_size;
     std::size_t patterns_size;
     std::size_t text_size;
-    Timer::Duration time_passed;
+    Timer::Duration time_passed_millis;
 };
 
 template <size_t PatternsSize>
@@ -39,10 +43,10 @@ TestImplResult RunTests(
         patterns_total_length += pattern.size();
     }
     if (actrie.PatternsSize() != PatternsSize) {
-        return {false, {}, {}};
+        return {TestStatus::kNotPassed, {}, {}};
     }
     if (actrie.NodesSize() > patterns_total_length * std::size(patterns)) {
-        return {false, {}, {}};
+        return {TestStatus::kNotPassed, {}, {}};
     }
 
     std::vector<std::pair<std::string_view, size_t>> found_occurances_size;
@@ -56,12 +60,14 @@ TestImplResult RunTests(
 
     Timer timer;
     actrie.FindAllSubstringsInText(text);
-    auto time_passed = timer.TimePassed();
-
+    auto time_passed_millis = timer.TimePassed();
+    TestStatus status       = found_occurances_size == expected_occurances
+                                  ? TestStatus::kPassed
+                                  : TestStatus::kNotPassed;
     return {
-        .passed = found_occurances_size == expected_occurances,
+        .status                   = status,
         .expected_occurances_size = found_occurances_size.size(),
-        .time_passed              = time_passed,
+        .time_passed_millis       = time_passed_millis,
     };
 }
 
@@ -75,15 +81,15 @@ TestResult Test1Impl() {
             {"a", 6},  {"a", 8},     {"a", 10},  {"aa", 10}, {"a", 11},
             {"a", 15}, {"fasb", 14}, {"ba", 17}, {"a", 18},  {"ab", 18},
         };
-    const auto [passed, found_occurances_size, time_passed] =
+    const auto [status, found_occurances_size, time_passed_millis] =
         RunTests(patterns, text, expected_occurances);
     return {
-        .passed                   = passed,
+        .status                   = status,
         .found_occurances_size    = found_occurances_size,
         .expected_occurances_size = expected_occurances.size(),
         .patterns_size            = std::size(patterns),
         .text_size                = text.size(),
-        .time_passed              = time_passed,
+        .time_passed_millis       = time_passed_millis,
     };
 }
 
@@ -99,15 +105,15 @@ TestResult Test2Impl() {
             {"CDE", 43}, {"ABC", 63},  {"CDE", 73}, {"ABC", 80},
             {"CDE", 82},
         };
-    const auto [passed, found_occurances_size, time_passed] =
+    const auto [status, found_occurances_size, time_passed_millis] =
         RunTests(patterns, text, expected_occurances);
     return {
-        .passed                   = passed,
+        .status                   = status,
         .found_occurances_size    = found_occurances_size,
         .expected_occurances_size = expected_occurances.size(),
         .patterns_size            = std::size(patterns),
         .text_size                = text.size(),
-        .time_passed              = time_passed,
+        .time_passed_millis       = time_passed_millis,
     };
 }
 
@@ -137,15 +143,15 @@ TestResult Test3Impl() {
             {"aba", 186},     {"aba", 203},    {"aba", 223},
             {"cabaaba", 222}, {"aba", 226},    {"baca", 227},
         };
-    const auto [passed, found_occurances_size, time_passed] =
+    const auto [status, found_occurances_size, time_passed_millis] =
         RunTests(patterns, text, expected_occurances);
     return {
-        .passed                   = passed,
+        .status                   = status,
         .found_occurances_size    = found_occurances_size,
         .expected_occurances_size = expected_occurances.size(),
         .patterns_size            = std::size(patterns),
         .text_size                = text.size(),
-        .time_passed              = time_passed,
+        .time_passed_millis       = time_passed_millis,
     };
 }
 
@@ -176,27 +182,28 @@ TestResult Test4Impl() {
         expected_occurances.emplace_back(patterns[j + 0], index + 2);
     }
 
-    const auto [passed, found_occurances_size, time_passed] =
+    const auto [status, found_occurances_size, time_passed_millis] =
         RunTests(patterns, text, expected_occurances);
     return {
-        .passed                   = passed,
+        .status                   = status,
         .found_occurances_size    = found_occurances_size,
         .expected_occurances_size = expected_occurances.size(),
         .patterns_size            = std::size(patterns),
         .text_size                = text.size(),
-        .time_passed              = time_passed,
+        .time_passed_millis       = time_passed_millis,
     };
 }
 
 void RunTestWrapper(std::function<TestResult()> test_functions,
                     std::uint32_t test_number) noexcept {
     try {
-        std::cout << "----------------------------------------------------------------\n"
+        std::cout << "----------------------------------------------------"
+                     "------------\n"
                   << "Running test " << test_number << '\n';
         TestResult result = test_functions();
-        auto time_passed = std::chrono::duration_cast<std::chrono::milliseconds>(result.time_passed).count();
         std::cout << "Test " << test_number
-                  << (result.passed ? " passed\n" : " failed\n")
+                  << (result.status == TestStatus::kPassed ? " passed\n"
+                                                           : " failed\n")
                   << "Number of added patterns: " << result.patterns_size
                   << '\n'
                   << "Length of the text to search patterns in: "
@@ -205,8 +212,10 @@ void RunTestWrapper(std::function<TestResult()> test_functions,
                   << result.expected_occurances_size << '\n'
                   << "Number of found occurances: "
                   << result.found_occurances_size << '\n'
-                  << "Time passed: " << time_passed << "ms\n"
-                  << "----------------------------------------------------------------\n";
+                  << "Time passed: " << result.time_passed_millis.count()
+                  << "ms\n"
+                  << "----------------------------------------------------"
+                     "------------\n";
     } catch (const std::exception& ex) {
         std::cerr << "Test " << test_number
                   << " failed with exception: " << ex.what() << '\n';
@@ -215,6 +224,8 @@ void RunTestWrapper(std::function<TestResult()> test_functions,
                   << " failed with unknown exception\n";
     }
 }
+
+}  // namespace
 
 void RunTests() noexcept {
     RunTestWrapper(Test1Impl, 1);
