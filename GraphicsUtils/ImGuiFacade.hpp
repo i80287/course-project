@@ -64,6 +64,9 @@ private:
         static void RenderDrawData();
     };
 
+    /// @brief Class `ImGuiBinder` depends on class `ImGuiContextManager`
+    ///         which depends on class `GLFWFacade`, so order of the
+    ///         fields is very important here.
     GLFWFacade glfw_facade_;
     ImGuiContextManager context_manager_;
     ImGuiBinder imgui_binder_;

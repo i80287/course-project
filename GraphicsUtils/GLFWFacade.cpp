@@ -7,13 +7,14 @@ namespace AppSpace::GraphicsUtils {
 
 /// @brief Class `GLFWwindowHolder` depends on `GLFWInitializer`
 ///         so order of the fields initialization is very important here.
+///        To mark this, we explicitly call GLFWInitializer ctor.
 /// @param window_width
 /// @param window_height
 /// @param window_title
 GLFWFacade::GLFWFacade(int window_width, int window_height,
                        const char* window_title)
     : initializer_(),
-      window_manager_(window_width, window_height, window_title) {
+      window_holder_(window_width, window_height, window_title) {
     glfwMakeContextCurrent(GetWindow());
     glfwSwapInterval(kGLFWSwapInterval);
     if (!TryLoadGLFW()) {
@@ -43,7 +44,7 @@ void GLFWFacade::UpdateWindowContext() noexcept {
 void GLFWFacade::ClearWindow() const noexcept {
     int display_w = 0;
     int display_h = 0;
-    glfwGetFramebufferSize(window_manager_.GetWindow(), &display_w, &display_h);
+    glfwGetFramebufferSize(window_holder_.GetWindow(), &display_w, &display_h);
     assert(glViewport);
     glViewport(0, 0, display_w, display_h);
 

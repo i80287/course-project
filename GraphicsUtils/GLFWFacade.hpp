@@ -51,14 +51,14 @@ private:
 
     bool TryLoadGLFW() const noexcept;
 
-    /// @brief Class `GLFWwindowHolder` depends on `GLFWInitializer`
+    /// @brief Class `GLFWwindowHolder` depends on class `GLFWInitializer`
     //          so order of the fields is very important here.
     GLFWInitializer initializer_;
-    GLFWwindowHolder window_manager_;
+    GLFWwindowHolder window_holder_;
 };
 
 constexpr GLFWwindow* GLFWFacade::GetWindow() const noexcept {
-    return window_manager_.GetWindow();
+    return window_holder_.GetWindow();
 }
 
 }  // namespace AppSpace::GraphicsUtils
