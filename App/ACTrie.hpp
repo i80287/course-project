@@ -112,6 +112,7 @@ public:
     constexpr std::size_t NodesSize() const noexcept;
     constexpr std::size_t PatternsSize() const noexcept;
     static constexpr VertexIndex SymbolToIndex(char symbol) noexcept;
+    static constexpr char IndexToSymbol(VertexIndex index) noexcept;
 
 private:
     static constexpr std::size_t kDefaultNodesCapacity = 16;
@@ -161,6 +162,10 @@ constexpr ACTrie::VertexIndex ACTrie::SymbolToIndex(char symbol) noexcept {
     }
 
     return static_cast<VertexIndex>(symbol_as_int) - kAlphabetStart;
+}
+
+constexpr char ACTrie::IndexToSymbol(VertexIndex index) noexcept {
+    return static_cast<char>(kAlphabetStart + index);
 }
 
 }  // namespace AppSpace::ACTrieDS

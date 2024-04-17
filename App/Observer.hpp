@@ -112,9 +112,7 @@ public:
     void Subscribe(ObserverType* observer) {
         assert(observer);
         assert(listener_ == nullptr);
-        if (observer->Subscribed()) {
-            observer->Unsubscribe();
-        }
+        assert(!observer->Subscribed());
         listener_ = observer;
         observer->SetObservable(this);
     }

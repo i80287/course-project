@@ -174,7 +174,7 @@ void ACTrie::JumpThroughCompressedSuffixLinks(VertexIndex current_node_index,
 void ACTrie::ComputeLinksForNodeChildren(VertexIndex node_index,
                                          std::queue<VertexIndex>& bfs_queue) {
     ACTNode& node = nodes_[node_index];
-    for (std::size_t child_node_symbol_index = 0;
+    for (VertexIndex child_node_symbol_index = 0;
          child_node_symbol_index < kAlphabetLength; child_node_symbol_index++) {
         VertexIndex child_link_v_index =
             nodes_[node.suffix_link][child_node_symbol_index];
@@ -194,7 +194,7 @@ void ACTrie::ComputeLinksForNodeChildren(VertexIndex node_index,
                     : nodes_[child_link_v_index].compressed_suffix_link;
 
             char parent_to_node_edge_symbol =
-                static_cast<char>(kAlphabetStart + child_node_symbol_index);
+                IndexToSymbol(child_node_symbol_index);
             NotifyAboutComputedSuffixLinks(child_index, node_index,
                                            parent_to_node_edge_symbol);
 

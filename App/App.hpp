@@ -8,7 +8,9 @@
 namespace AppSpace {
 
 class App final {
-    using ModelType = ACTrieDS::ACTrie;
+    using ModelType   = ACTrieDS::ACTrie;
+    using ImGuiFacade = GraphicsUtils::ImGuiFacade;
+    using Drawer      = GraphicsUtils::Drawer;
 
 public:
     App();
@@ -18,7 +20,7 @@ private:
     GraphicsUtils::ImGuiFacade imgui_facade_;
     GraphicsUtils::Drawer view_;
     ModelType model_;
-    Controller::ACTrieController model_controller_;
+    ACTrieController model_controller_;
 };
 
 }  // namespace AppSpace

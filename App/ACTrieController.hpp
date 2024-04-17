@@ -3,7 +3,7 @@
 #include "ACTrie.hpp"
 #include "Observer.hpp"
 
-namespace AppSpace::Controller {
+namespace AppSpace {
 
 class ACTrieController final {
     using ACTrieModel = ACTrieDS::ACTrie;
@@ -16,7 +16,7 @@ public:
     using ACTrieResetObserver = Observer<void, void>;
     using ACTrieBuildObserver = Observer<void, void>;
 
-    ACTrieController(ACTrieModel& host_model);
+    ACTrieController(ACTrieModel* host_model);
     PatternObserver* GetPatternObserverPort() noexcept;
     TextObserver* GetTextObserverPort() noexcept;
     ACTrieResetObserver* GetACTrieResetObserverPort() noexcept;
@@ -30,4 +30,4 @@ private:
     ACTrieBuildObserver actrie_build_port_;
 };
 
-}  // namespace AppSpace::Controller
+}  // namespace AppSpace
