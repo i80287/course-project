@@ -8,9 +8,9 @@ namespace AppSpace::GraphicsUtils {
 ///         which depends on class `GLFWFacade`, so order of the
 ///         fields initialization is very important here.
 ///        To mark this, we explicitly call ImGuiContextManager ctor.
-/// @param window_width 
-/// @param window_height 
-/// @param window_title 
+/// @param window_width
+/// @param window_height
+/// @param window_title
 ImGuiFacade::ImGuiFacade(int window_width, int window_height,
                          const char* window_title)
     : glfw_facade_(window_width, window_height, window_title),
