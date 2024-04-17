@@ -185,7 +185,6 @@ void Drawer::HandleAddedNode(const CopiedUpdatedNodeInfo& updated_node_info) {
         assert(parent_node_index < node_index);
         assert(parent_node_index < nodes_.size());
     }
-    assert(node_index == nodes_.size() - 1);
 
     char parent_to_node_edge_symbol =
         updated_node_info.parent_to_node_edge_symbol;
@@ -197,6 +196,7 @@ void Drawer::HandleAddedNode(const CopiedUpdatedNodeInfo& updated_node_info) {
         .parent_index               = parent_node_index,
         .parent_to_node_edge_symbol = parent_to_node_edge_symbol,
     });
+    assert(node_index == nodes_.size() - 1);
 
     switch (node_index) {
         case ACTrieModel::kNullNodeIndex:
