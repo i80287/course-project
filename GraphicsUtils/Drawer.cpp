@@ -28,10 +28,12 @@ namespace {
 //  https://en.cppreference.com/w/cpp/utility/variant/visit
 // It is used to pass different lambdas to std::visit.
 template <class... Ts>
-struct overloaded : Ts... {
+struct overloaded : public Ts... {
     using Ts::operator()...;
 };
-
+// explicit deduction guide
+template <class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
 }  // namespace
 
 Drawer::Drawer()
@@ -111,7 +113,8 @@ void Drawer::HandleNextEvent() {
     const auto delay =
         DrawerEventHandlingDelayParams::kMaxTimeDelay *
         (DrawerEventHandlingDelayParams::kMaxSpeedUnit - drawer_show_speed_) /
-        (DrawerEventHandlingDelayParams::kMaxSpeedUnit - DrawerEventHandlingDelayParams::kMinSpeedUnit);
+        (DrawerEventHandlingDelayParams::kMaxSpeedUnit -
+         DrawerEventHandlingDelayParams::kMinSpeedUnit);
     if (time_since_last_event <= delay) {
         return;
     }
@@ -332,7 +335,8 @@ void Drawer::DrawACTrieTree(ImVec2 canvas_screen_pos, ImVec2 canvas_end_pos) {
 
     ImGui::PushItemWidth(available_width *
                          CanvasParams::kControllersWidthScaleX);
-    ImGui::SliderInt("Speed", &drawer_show_speed_, DrawerEventHandlingDelayParams::kMinSpeedUnit,
+    ImGui::SliderInt("Speed", &drawer_show_speed_,
+                     DrawerEventHandlingDelayParams::kMinSpeedUnit,
                      DrawerEventHandlingDelayParams::kMaxSpeedUnit);
     if (is_inputting_text_) {
         ImGui::SameLine();
@@ -687,11 +691,11 @@ void Drawer::TextInputImGuiCallback(ImGuiInputTextCallbackData& data) {
 }
 
 void Drawer::ClearStateAndNotify() {
-    drawer_show_speed_                 = DrawerEventHandlingDelayParams::kMinSpeedUnit;
-    passing_through_node_index_        = ACTrieModel::kNullNodeIndex;
-    found_word_node_index_             = ACTrieModel::kNullNodeIndex;
-    is_no_resize_                      = false;
-    is_no_decoration_                  = false;
+    drawer_show_speed_          = DrawerEventHandlingDelayParams::kMinSpeedUnit;
+    passing_through_node_index_ = ACTrieModel::kNullNodeIndex;
+    found_word_node_index_      = ACTrieModel::kNullNodeIndex;
+    is_no_resize_               = false;
+    is_no_decoration_           = false;
     is_window_rounding_disabled_       = false;
     is_scroll_patterns_to_bottom_      = false;
     is_patterns_auto_scroll_           = true;

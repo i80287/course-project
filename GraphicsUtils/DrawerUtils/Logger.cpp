@@ -17,7 +17,8 @@ void Logger::DebugLog(std::string_view str1, std::string_view str2, char sep,
     noexcept(!kIsDebugLogEnabled) {
     if constexpr (DebugModeEnabled()) {
         bool add_separator = sep != '\0';
-        std::string s(str1.size() + add_separator + str2.size(), '\0');
+        std::string s;
+        s.reserve(str1.size() + add_separator + str2.size());
         s += str1;
         if (add_separator) {
             s.push_back(sep);

@@ -235,9 +235,9 @@ private:
         CanvasParams::kInitialScrollingPosition;
     VertexIndex passing_through_node_index_ = ACTrieModel::kNullNodeIndex;
     VertexIndex found_word_node_index_      = ACTrieModel::kNullNodeIndex;
-    int drawer_show_speed_                  = DrawerEventHandlingDelayParams::kMinSpeedUnit;
-    bool is_no_resize_                      = false;
-    bool is_no_decoration_                  = false;
+    int drawer_show_speed_ = DrawerEventHandlingDelayParams::kMinSpeedUnit;
+    bool is_no_resize_     = false;
+    bool is_no_decoration_ = false;
     bool is_window_rounding_disabled_       = false;
     bool is_scroll_patterns_to_bottom_      = false;
     bool is_patterns_auto_scroll_           = true;
