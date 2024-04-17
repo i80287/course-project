@@ -7,62 +7,27 @@ namespace AppSpace::GraphicsUtils::DrawerUtils {
 
 class Logger final {
 public:
-    static constexpr bool DebugModeEnabled() noexcept {
-        return kIsDebugLogEnabled;
-    }
-
+    static constexpr bool DebugModeEnabled() noexcept;
     template <class T>
-    void LogTypeName() const {
-        std::clog << "[INFO] [type name: " << GetTypename<T>() << ']'
-                  << std::endl;
-    }
-
+    void LogTypeName() const;
     void DebugLog(std::string_view msg,
-                  const std::source_location location =
+                  std::source_location location =
                       std::source_location::current()) const
-        noexcept(!kIsDebugLogEnabled) {
-        if constexpr (DebugModeEnabled()) {
-            std::clog << "[DEBUG] [message: '" << msg
-                      << "'] [source: " << location.file_name() << ", line "
-                      << location.line() << ':' << location.column() << "] ["
-                      << location.function_name() << ']' << std::endl;
-        }
-    }
-
-    void DebugLog(
-        std::string_view str1, std::string_view str2, char sep = '\0',
-        std::source_location location = std::source_location::current()) const
-        noexcept(!kIsDebugLogEnabled) {
-        if constexpr (DebugModeEnabled()) {
-            bool add_separator = sep != '\0';
-            std::string s(str1.size() + add_separator + str2.size(), '\0');
-            s += str1;
-            if (add_separator) {
-                s.push_back(sep);
-            }
-            s += str2;
-            DebugLog(s, location);
-        }
-    }
-
+        noexcept(!kIsDebugLogEnabled);
+    void DebugLog(std::string_view str1, std::string_view str2,
+                  char sep = '\0',
+                  std::source_location location =
+                      std::source_location::current()) const
+        noexcept(!kIsDebugLogEnabled);
     template <class T>
-    void DebugLog(
-        std::string_view message, const T& arg,
-        std::source_location location = std::source_location::current()) const
-        noexcept(!kIsDebugLogEnabled) {
-        if constexpr (DebugModeEnabled()) {
-            if constexpr (std::is_same_v<T, std::string>) {
-                DebugLog(message, std::string_view(arg), '\0', location);
-            } else {
-                DebugLog(message, std::string_view(std::to_string(arg)), '\0',
-                         location);
-            }
-        }
-    }
+    void DebugLog(std::string_view message, const T& arg,
+                  std::source_location location =
+                      std::source_location::current()) const
+        noexcept(!kIsDebugLogEnabled);
 
 private:
     template <class T>
-    static consteval std::string_view GetTypename() {
+    static consteval std::string_view GetTypeName() {
         return GetTypeNameImpl(std::source_location::current());
     }
 
@@ -89,6 +54,32 @@ private:
         true;
 #endif
 };
+
+constexpr bool Logger::DebugModeEnabled() noexcept {
+    return kIsDebugLogEnabled;
+}
+
+template <class T>
+void Logger::LogTypeName() const {
+    std::clog << "[INFO] [type name: " << GetTypeName<T>() << ']'
+              << std::endl;
+}
+
+template <class T>
+void Logger::DebugLog(std::string_view message, const T& arg,
+                      std::source_location location) const
+    noexcept(!kIsDebugLogEnabled) {
+    if constexpr (DebugModeEnabled()) {
+        if constexpr (std::is_constructible_v<std::string_view, const T&>)
+
+            if constexpr (std::is_same_v<T, std::string>) {
+                DebugLog(message, std::string_view(arg), '\0', location);
+            } else {
+                DebugLog(message, std::string_view(std::to_string(arg)),
+                         '\0', location);
+            }
+    }
+}
 
 inline constexpr Logger logger;
 
