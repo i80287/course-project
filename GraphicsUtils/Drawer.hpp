@@ -11,6 +11,7 @@
 #include "../App/ACTrie.hpp"
 #include "../App/Observer.hpp"
 #include "DrawerUtils/StringHistoryManager.hpp"
+#include "Palette.hpp"
 
 namespace AppSpace::GraphicsUtils {
 
@@ -52,37 +53,6 @@ public:
     void OnNewFrame();
 
 private:
-    struct Palette final {
-        struct AsImU32 final {
-            static constexpr ImU32 kBlackColor     = IM_COL32_BLACK;
-            static constexpr ImU32 kWhiteColor     = IM_COL32_WHITE;
-            static constexpr ImU32 kRedColor       = IM_COL32(255, 0, 0, 255);
-            static constexpr ImU32 kGreenColor     = IM_COL32(0, 255, 0, 255);
-            static constexpr ImU32 kBlueColor      = IM_COL32(0, 0, 255, 255);
-            static constexpr ImU32 kGrayColor      = IM_COL32(50, 50, 50, 255);
-            static constexpr ImU32 kBrightRedColor = IM_COL32(250, 60, 50, 255);
-            static constexpr ImU32 kYellowColor    = IM_COL32(255, 255, 0, 255);
-            static constexpr ImU32 kOrangeColor    = IM_COL32(255, 165, 0, 255);
-        };
-
-        struct AsImColor final {
-            static constexpr ImColor kBlackColor =
-                ImColor(AsImU32::kBlackColor);
-            static constexpr ImColor kWhiteColor =
-                ImColor(AsImU32::kWhiteColor);
-            static constexpr ImColor kRedColor = ImColor(AsImU32::kRedColor);
-            static constexpr ImColor kGreenColor =
-                ImColor(AsImU32::kGreenColor);
-            static constexpr ImColor kBlueColor = ImColor(AsImU32::kBlueColor);
-            static constexpr ImColor kGrayColor = ImColor(AsImU32::kGrayColor);
-            static constexpr ImColor kBrightRedColor =
-                ImColor(AsImU32::kBrightRedColor);
-            static constexpr ImColor kYellowColor =
-                ImColor(AsImU32::kYellowColor);
-            static constexpr ImColor kOrangeColor =
-                ImColor(AsImU32::kOrangeColor);
-        };
-    };
     struct CanvasParams final {
         static constexpr float kControllersWidthScaleX          = 1.0f / 4;
         static constexpr float kTreeDrawingCanvasScaleX         = 0.6f;
@@ -143,10 +113,11 @@ private:
         using Time =
             std::chrono::time_point<std::chrono::high_resolution_clock>;
         static constexpr auto kMaxTimeDelay = std::chrono::milliseconds(1000);
+        // clang-format off
         // We use 'int' instead of 'std::uint32_t' or 'std::int32_t'
         //  to match one to one with the following ImGui function:
-        // bool ImGui::SliderInt(const char*,int*,int,int,const
-        // char*,ImGuiSliderFlags)
+        // bool ImGui::SliderInt(const char*,int*,int,int,const char*,ImGuiSliderFlags)
+        // clang-format on
         static constexpr int kMinSpeedUnit = 1;
         static constexpr int kMaxSpeedUnit = 9;
         static_assert(kMinSpeedUnit <= kMaxSpeedUnit, "");
@@ -190,6 +161,9 @@ private:
     void OnBadPatternInput(BadInputPatternInfoPassBy bad_input_info);
     void OnPassingThrough(PassingThroughInfoPassBy passing_info);
     void HandleNodeUpdate(const CopiedUpdatedNodeInfo& updated_node_info);
+    void HandleAddedNode(const CopiedUpdatedNodeInfo& updated_node_info);
+    void HandleNodeComputedLinks(
+        const CopiedUpdatedNodeInfo& updated_node_info);
     void HandleFoundSubstring(CopiedFoundSubstringInfo&& found_substring_info);
     void HandleBadPatternInput(BadInputPatternInfoPassBy updated_node_info);
     void HandlePassingThrough(PassingThroughInfo passing_info);

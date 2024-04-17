@@ -94,42 +94,43 @@ struct overloaded : Ts... {
 };
 
 void Drawer::HandleNextEvent() {
-    if (!events_.empty()) {
-        const auto time_now = std::chrono::high_resolution_clock::now();
-        const std::chrono::nanoseconds time_since_last_event =
-            time_now - time_since_last_event_handled_;
-
-        assert(EventParams::kMinSpeedUnit <= drawer_show_speed_);
-        assert(drawer_show_speed_ <= EventParams::kMaxSpeedUnit);
-        const auto delay =
-            EventParams::kMaxTimeDelay *
-            (EventParams::kMaxSpeedUnit - drawer_show_speed_) /
-            (EventParams::kMaxSpeedUnit - EventParams::kMinSpeedUnit);
-        if (time_since_last_event <= delay) {
-            return;
-        }
-        time_since_last_event_handled_ = time_now;
-
-        std::visit(
-            overloaded{
-                [this](const CopiedUpdatedNodeInfo& updated_node_info) {
-                    HandleNodeUpdate(updated_node_info);
-                },
-                [this](CopiedFoundSubstringInfo&& found_substring_info) {
-                    HandleFoundSubstring(std::move(found_substring_info));
-                },
-                [this](BadInputPatternInfoPassBy bad_input_info) {
-                    HandleBadPatternInput(
-                        std::forward<BadInputPatternInfo>(bad_input_info));
-                },
-                [this](PassingThroughInfoPassBy passing_through_info) {
-                    HandlePassingThrough(
-                        std::forward<PassingThroughInfo>(passing_through_info));
-                },
-            },
-            std::move(events_.front()));
-        events_.pop_front();
+    if (events_.empty()) {
+        return;
     }
+
+    const auto time_now = std::chrono::high_resolution_clock::now();
+    const std::chrono::nanoseconds time_since_last_event =
+        time_now - time_since_last_event_handled_;
+
+    assert(EventParams::kMinSpeedUnit <= drawer_show_speed_);
+    assert(drawer_show_speed_ <= EventParams::kMaxSpeedUnit);
+    const auto delay =
+        EventParams::kMaxTimeDelay *
+        (EventParams::kMaxSpeedUnit - drawer_show_speed_) /
+        (EventParams::kMaxSpeedUnit - EventParams::kMinSpeedUnit);
+    if (time_since_last_event <= delay) {
+        return;
+    }
+    time_since_last_event_handled_ = time_now;
+
+    std::visit(overloaded{
+                   [this](const CopiedUpdatedNodeInfo& updated_node_info) {
+                       HandleNodeUpdate(updated_node_info);
+                   },
+                   [this](CopiedFoundSubstringInfo&& found_substring_info) {
+                       HandleFoundSubstring(std::move(found_substring_info));
+                   },
+                   [this](BadInputPatternInfoPassBy bad_input_info) {
+                       HandleBadPatternInput(
+                           std::forward<BadInputPatternInfo>(bad_input_info));
+                   },
+                   [this](PassingThroughInfoPassBy passing_through_info) {
+                       HandlePassingThrough(std::forward<PassingThroughInfo>(
+                           passing_through_info));
+                   },
+               },
+               std::move(events_.front()));
+    events_.pop_front();
 }
 
 void Drawer::SetupImGuiStyle() {
@@ -164,52 +165,69 @@ void Drawer::OnPassingThrough(PassingThroughInfoPassBy passing_info) {
 }
 
 void Drawer::HandleNodeUpdate(const CopiedUpdatedNodeInfo& updated_node_info) {
+    switch (updated_node_info.status) {
+        case ACTrieModel::UpdatedNodeStatus::kAdded:
+            HandleAddedNode(updated_node_info);
+            break;
+        case ACTrieModel::UpdatedNodeStatus::kSuffixLinksComputed:
+            HandleNodeComputedLinks(updated_node_info);
+            break;
+        default:
+            assert(false);
+            break;
+    }
+}
+
+void Drawer::HandleAddedNode(const CopiedUpdatedNodeInfo& updated_node_info) {
     const auto node_index        = updated_node_info.node_index;
     const auto parent_node_index = updated_node_info.parent_node_index;
     if (node_index != ACTrieModel::kNullNodeIndex) {
         assert(parent_node_index < node_index);
         assert(parent_node_index < nodes_.size());
     }
+    assert(node_index == nodes_.size() - 1);
 
-    switch (updated_node_info.status) {
-        case ACTrieModel::UpdatedNodeStatus::kAdded: {
-            char parent_to_node_edge_symbol =
-                updated_node_info.parent_to_node_edge_symbol;
-            // We copy node because
-            // "std::move of the expression of the trivially-copyable type
-            // 'ACTrieModel::ACTNode' has no effect;"
-            nodes_.emplace_back(NodeState{
-                .node                       = updated_node_info.node,
-                .parent_index               = parent_node_index,
-                .parent_to_node_edge_symbol = parent_to_node_edge_symbol,
-            });
-            assert(node_index == nodes_.size() - 1);
-            switch (node_index) {
-                case ACTrieModel::kNullNodeIndex:
-                case ACTrieModel::kFakePreRootIndex:
-                case ACTrieModel::kRootIndex:
-                    break;
-                default:
-                    nodes_[parent_node_index].node[ACTrieModel::SymbolToIndex(
-                        parent_to_node_edge_symbol)] = node_index;
-                    break;
-            }
-            RecalculateAllNodesPositions(nodes_);
-            logger.DebugLog("Added new node");
-        } break;
-        case ACTrieModel::UpdatedNodeStatus::kSuffixLinksComputed: {
-            assert(node_index < nodes_.size());
-            const auto& updated_node            = updated_node_info.node;
-            nodes_[node_index].node.suffix_link = updated_node.suffix_link;
-            nodes_[node_index].node.compressed_suffix_link =
-                updated_node.compressed_suffix_link;
-            nodes_[node_index].node.word_index = updated_node.word_index;
-            logger.DebugLog("Updated suffix links status for node");
-        } break;
+    char parent_to_node_edge_symbol =
+        updated_node_info.parent_to_node_edge_symbol;
+    // We copy node because
+    // "std::move of the expression of the trivially-copyable type
+    // 'ACTrieModel::ACTNode' has no effect;"
+    nodes_.emplace_back(NodeState{
+        .node                       = updated_node_info.node,
+        .parent_index               = parent_node_index,
+        .parent_to_node_edge_symbol = parent_to_node_edge_symbol,
+    });
+
+    switch (node_index) {
+        case ACTrieModel::kNullNodeIndex:
+        case ACTrieModel::kFakePreRootIndex:
+        case ACTrieModel::kRootIndex:
+            break;
         default:
-            assert(false);
+            NodeState& parent_node_state = nodes_[parent_node_index];
+            parent_node_state
+                .node[ACTrieModel::SymbolToIndex(parent_to_node_edge_symbol)] =
+                node_index;
             break;
     }
+    RecalculateAllNodesPositions(nodes_);
+    logger.DebugLog("Added new node");
+}
+
+void Drawer::HandleNodeComputedLinks(
+    const CopiedUpdatedNodeInfo& updated_node_info) {
+    const auto node_index        = updated_node_info.node_index;
+    const auto parent_node_index = updated_node_info.parent_node_index;
+    assert(node_index != ACTrieModel::kNullNodeIndex);
+    assert(node_index < nodes_.size());
+    assert(parent_node_index < node_index);
+    assert(parent_node_index < nodes_.size());
+    const auto& updated_node            = updated_node_info.node;
+    nodes_[node_index].node.suffix_link = updated_node.suffix_link;
+    nodes_[node_index].node.compressed_suffix_link =
+        updated_node.compressed_suffix_link;
+    nodes_[node_index].node.word_index = updated_node.word_index;
+    logger.DebugLog("Updated suffix links status for node");
 }
 
 void Drawer::HandleFoundSubstring(
