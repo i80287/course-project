@@ -23,6 +23,17 @@ namespace AppSpace::GraphicsUtils {
 using DrawerUtils::logger;
 using namespace ImGuiExtensions;
 
+namespace {
+// The technique for std::visit taken from the example on
+//  https://en.cppreference.com/w/cpp/utility/variant/visit
+// It is used to pass different lambdas to std::visit.
+template <class... Ts>
+struct overloaded : Ts... {
+    using Ts::operator()...;
+};
+
+}  // namespace
+
 Drawer::Drawer()
     : updated_node_in_port_([this](UpdatedNodeInfoPassBy updated_node_info) {
           OnUpdatedNode(std::forward<UpdatedNodeInfoPassBy>(updated_node_info));
@@ -85,13 +96,6 @@ void Drawer::OnNewFrame() {
     HandleNextEvent();
     Draw();
 }
-
-// The technique for std::visit taken from the example on
-//  https://en.cppreference.com/w/cpp/utility/variant/visit
-template <class... Ts>
-struct overloaded : Ts... {
-    using Ts::operator()...;
-};
 
 void Drawer::HandleNextEvent() {
     if (events_.empty()) {
