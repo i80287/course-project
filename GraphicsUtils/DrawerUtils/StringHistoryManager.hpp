@@ -6,7 +6,8 @@
 namespace AppSpace::GraphicsUtils::DrawerUtils {
 
 class StringHistoryManager {
-    using Index = std::size_t;
+    using Index       = std::size_t;
+    using SignedIndex = std::ptrdiff_t;
 
 public:
     auto begin() const noexcept {
@@ -37,6 +38,9 @@ public:
 
 private:
     static constexpr Index kInitialPosition = static_cast<Index>(-1);
+    static constexpr Index IndexToSignedIndex(SignedIndex i) noexcept {
+        return static_cast<Index>(i);
+    }
 
     std::vector<std::string> history_;
     Index current_history_position_ = kInitialPosition;

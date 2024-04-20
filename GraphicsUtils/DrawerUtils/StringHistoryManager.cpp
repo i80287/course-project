@@ -28,7 +28,7 @@ void StringHistoryManager::Clear() noexcept {
 std::string_view StringHistoryManager::MoveToPreviousInputAndRead() noexcept {
     assert(!Empty());
     current_history_position_--;
-    if (static_cast<std::ptrdiff_t>(current_history_position_) < 0) {
+    if (IndexToSignedIndex(current_history_position_) < 0) {
         current_history_position_ = history_.size() - 1;
     }
     return history_[current_history_position_];

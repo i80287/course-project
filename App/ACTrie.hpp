@@ -116,6 +116,7 @@ public:
 
 private:
     static constexpr std::size_t kDefaultNodesCapacity = 16;
+    static constexpr WordLength SizeToWordLength(std::size_t size) noexcept;
     void NotifyAboutFoundSubstring(VertexIndex current_node_index,
                                    std::size_t position_in_text,
                                    std::string_view text);
@@ -166,6 +167,11 @@ constexpr ACTrie::VertexIndex ACTrie::SymbolToIndex(char symbol) noexcept {
 
 constexpr char ACTrie::IndexToSymbol(VertexIndex index) noexcept {
     return static_cast<char>(kAlphabetStart + index);
+}
+
+constexpr ACTrie::WordLength ACTrie::SizeToWordLength(
+    std::size_t size) noexcept {
+    return static_cast<WordLength>(size);
 }
 
 }  // namespace AppSpace::ACTrieDS

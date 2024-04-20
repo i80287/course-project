@@ -26,6 +26,8 @@ GLFWFacade::GLFWFacade(int window_width, int window_height,
 bool GLFWFacade::ShouldClose() const noexcept {
     auto window = GetWindow();
     assert(window != nullptr);
+    // glfwWindowShouldClose returns int in C-style
+    //  but it is actually bool.
     return static_cast<bool>(glfwWindowShouldClose(window));
 }
 

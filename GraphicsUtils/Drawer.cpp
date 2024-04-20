@@ -595,6 +595,7 @@ bool Drawer::AddPatternInput(float text_input_width) {
         pattern_input_buffer_.size(), input_text_flags,
         [](ImGuiInputTextCallbackData* data) {
             assert(data);
+            // ImGui passes data->UserData as void*
             Drawer* this_drawer = static_cast<Drawer*>(data->UserData);
             assert(this_drawer);
             this_drawer->PatternInputImGuiCallback(*data);
@@ -627,6 +628,7 @@ bool Drawer::AddTextInput(float text_input_width) {
         input_text_flags,
         [](ImGuiInputTextCallbackData* data) {
             assert(data);
+            // ImGui passes data->UserData as void*
             Drawer* this_drawer = static_cast<Drawer*>(data->UserData);
             assert(this_drawer);
             this_drawer->TextInputImGuiCallback(*data);
@@ -731,11 +733,16 @@ void Drawer::ClearTextInputBuffer() noexcept {
 
 std::string_view Drawer::TrimSpaces(std::string_view str) noexcept {
     std::size_t l = 0;
-    while (l < str.size() && std::isspace(static_cast<std::uint8_t>(str[l]))) {
+
+    auto is_space = [](char c) noexcept {
+        return static_cast<bool>(std::isspace(static_cast<std::uint8_t>(c)));
+    };
+
+    while (l < str.size() && is_space(str[l])) {
         l++;
     }
     std::size_t r = str.size();
-    while (r > l && std::isspace(static_cast<std::uint8_t>(str[r - 1]))) {
+    while (r > l && is_space(str[r - 1])) {
         r--;
     }
     return {str.begin() + l, r - l};

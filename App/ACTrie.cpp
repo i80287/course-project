@@ -57,8 +57,8 @@ ACTrie& ACTrie::AddPattern(std::string_view pattern) {
     }
 
     nodes_[current_node_index].word_index =
-        static_cast<WordLength>(words_lengths_.size());
-    words_lengths_.push_back(static_cast<WordLength>(pattern.size()));
+        SizeToWordLength(words_lengths_.size());
+    words_lengths_.push_back(SizeToWordLength(pattern.size()));
     return *this;
 }
 
