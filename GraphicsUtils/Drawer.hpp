@@ -2,13 +2,13 @@
 
 #include <imgui.h>
 
-#include <chrono>
 #include <deque>
 #include <limits>
 #include <variant>
 
 #include "../App/ACTrie.hpp"
 #include "../App/Observer.hpp"
+#include "DrawerShowSpeedManager.hpp"
 #include "DrawerUtils/StringHistoryManager.hpp"
 #include "Palette.hpp"
 
@@ -94,7 +94,31 @@ private:
         static constexpr float kDeltaXBetweenNodes        = 5.0f;
         static constexpr float kNodeOffsetX               = 2.0f;
         static constexpr float kEdgeThickness             = 2.0f;
+        static constexpr float kNodeThickness             = 1.5f;
         static constexpr float kEdgeTextPositionScaleY    = 0.2f;
+        static constexpr float kSuffixLinkXOffsetScale    = -0.2f;
+        static constexpr float kCompressedSuffixLinkXOffsetScale = 0.2f;
+
+        static constexpr ImU32 kSuffixLinkColor = Palette::AsImU32::kBlueColor;
+        static constexpr ImU32 kCompressedSuffixLinkColor =
+            Palette::AsImU32::kGreenColor;
+
+        static constexpr ImVec2 kSuffixLinkCenterMoveVector = ImVec2(
+            TreeParams::kNodeRadius * TreeParams::kSuffixLinkXOffsetScale, 0);
+        static constexpr ImVec2 kCompressedSuffixLinkCenterMoveVector =
+            ImVec2(TreeParams::kNodeRadius *
+                       TreeParams::kCompressedSuffixLinkXOffsetScale,
+                   0);
+        static_assert(-1 < kSuffixLinkXOffsetScale &&
+                          kSuffixLinkXOffsetScale < 1,
+                      "");
+        static_assert(-1 < kCompressedSuffixLinkXOffsetScale &&
+                          kCompressedSuffixLinkXOffsetScale < 1,
+                      "");
+        static_assert(kSuffixLinkXOffsetScale *
+                              kCompressedSuffixLinkXOffsetScale <
+                          0,
+                      "scales must have opposite signs");
         static_assert(0 < kEdgeTextPositionScaleY &&
                           kEdgeTextPositionScaleY < 0.5,
                       "");
@@ -107,22 +131,6 @@ private:
                       "");
         static_assert(kFoundSubstringRadiusScale != kPassingThroughRadiusScale,
                       "");
-    };
-    struct DrawerEventHandlingDelayParams final {
-        using Time =
-            std::chrono::time_point<std::chrono::high_resolution_clock>;
-        static constexpr auto kMaxTimeDelay = std::chrono::milliseconds(1000);
-        // clang-format off
-        // We use 'int' instead of 'std::uint32_t' or 'std::int32_t'
-        //  to match one to one with the following ImGui function:
-        // bool ImGui::SliderInt(const char*,int*,int,int,const char*,ImGuiSliderFlags)
-        // clang-format on
-        static constexpr int kMinSpeedUnit = 1;
-        static constexpr int kMaxSpeedUnit = 9;
-        static_assert(kMinSpeedUnit <= kMaxSpeedUnit, "");
-        static_assert(((kMaxSpeedUnit - kMinSpeedUnit) &
-                       ((kMaxSpeedUnit - kMinSpeedUnit) - 1)) == 0,
-                      "must be power of 2 for better performance");
     };
     struct NodeState final {
         ACTrieModel::ACTNode node;
@@ -142,12 +150,16 @@ private:
         ACTrieModel::UpdatedNodeStatus status;
         char parent_to_node_edge_symbol;
     };
-    // same as ACTrie::FoundSubstringInfo but with string_view copied into
-    // string.
+    // same as ACTrie::FoundSubstringInfo but with string_view
+    //  copied into string.
     struct CopiedFoundSubstringInfo final {
         std::string found_substring;
         std::size_t substring_start_index;
         VertexIndex current_vertex_index;
+    };
+    struct FontParams final {
+        static constexpr float kMinFontScale = 0.8f;
+        static constexpr float kMaxFontScale = 1.6f;
     };
     using EventType =
         std::variant<CopiedUpdatedNodeInfo, CopiedFoundSubstringInfo,
@@ -209,6 +221,10 @@ private:
                                 ImVec2 canvas_move_vector,
                                 ImVec2 canvas_start_pos,
                                 ImVec2 canvas_end_pos) const;
+    void DrawSuffixLink(ImDrawList& draw_list, ImVec2 node_center,
+                        ImVec2 suf_link_node_center,
+                        ImVec2 suf_link_move_vector,
+                        ImU32 suf_link_color) const;
     static bool NodeFitsInCanvas(ImVec2 node_center, ImVec2 canvas_start_pos,
                                  ImVec2 canvas_end_pos) noexcept;
 
@@ -225,8 +241,8 @@ private:
     Observable<void, void> actrie_build_port_;
 
     std::deque<EventType> events_;
-    DrawerEventHandlingDelayParams::Time time_since_last_event_handled_;
     std::vector<NodeState> nodes_;
+    DrawerShowSpeedManager show_speed_manager_;
     DrawerUtils::StringHistoryManager patterns_input_history_;
     DrawerUtils::StringHistoryManager texts_input_history_;
     std::vector<std::string> found_words_;
@@ -234,9 +250,9 @@ private:
         CanvasParams::kInitialScrollingPosition;
     VertexIndex passing_through_node_index_ = ACTrieModel::kNullNodeIndex;
     VertexIndex found_word_node_index_      = ACTrieModel::kNullNodeIndex;
-    int drawer_show_speed_ = DrawerEventHandlingDelayParams::kMinSpeedUnit;
-    bool is_no_resize_     = false;
-    bool is_no_decoration_ = false;
+    float font_scale_                       = 1.0;
+    bool is_no_resize_                      = false;
+    bool is_no_decoration_                  = false;
     bool is_window_rounding_disabled_       = false;
     bool is_scroll_patterns_to_bottom_      = false;
     bool is_patterns_auto_scroll_           = true;

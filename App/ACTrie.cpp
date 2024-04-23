@@ -100,6 +100,7 @@ ACTrie& ACTrie::FindAllSubstringsInText(std::string_view text) {
     }
 
     VertexIndex current_node_index = kRootIndex;
+    NotifyAboutPassingThroughNode(current_node_index);
     for (std::size_t i = 0; i < text.size(); i++) {
         VertexIndex symbol_index = SymbolToIndex(text[i]);
         if (symbol_index >= kAlphabetLength) {

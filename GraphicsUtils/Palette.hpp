@@ -15,6 +15,7 @@ struct Palette final {
         static constexpr ImU32 kBrightRedColor = IM_COL32(250, 60, 50, 255);
         static constexpr ImU32 kYellowColor    = IM_COL32(255, 255, 0, 255);
         static constexpr ImU32 kOrangeColor    = IM_COL32(255, 165, 0, 255);
+        static constexpr ImU32 kDarkGreenColor = IM_COL32(21, 71, 52, 255);
     };
 
     struct AsImColor final {
@@ -28,6 +29,8 @@ struct Palette final {
             ImColor(AsImU32::kBrightRedColor);
         static constexpr ImColor kYellowColor = ImColor(AsImU32::kYellowColor);
         static constexpr ImColor kOrangeColor = ImColor(AsImU32::kOrangeColor);
+        static constexpr ImColor kDarkGreenColor =
+            ImColor(AsImU32::kDarkGreenColor);
     };
 };
 
