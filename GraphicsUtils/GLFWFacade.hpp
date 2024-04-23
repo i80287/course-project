@@ -8,8 +8,14 @@ namespace AppSpace::GraphicsUtils {
 
 class GLFWFacade final {
 public:
+    struct WindowSize {
+        int width;
+        int height;
+    };
+
     GLFWFacade(int window_width, int window_height, const char* window_title);
     constexpr GLFWwindow* GetWindow() const noexcept;
+    WindowSize GetWindowSize() const noexcept;
     bool ShouldClose() const noexcept;
     void PollEvents() const noexcept;
     void UpdateWindowContext() noexcept;
@@ -17,6 +23,12 @@ public:
 
 private:
     static constexpr int kGLFWSwapInterval = 1;
+    struct ScreenParams final {
+        static constexpr float kScreenClearColorRed   = 0.45f;
+        static constexpr float kScreenClearColorGreen = 0.55f;
+        static constexpr float kScreenClearColorBlue  = 0.60f;
+        static constexpr float kScreenClearColorAlpha = 1.00f;
+    };
 
     class GLFWInitializer final {
     public:
