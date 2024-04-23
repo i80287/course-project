@@ -770,6 +770,7 @@ void Drawer::RecalculateAllNodesPositions(std::vector<NodeState>& nodes) {
     for (VertexIndex leaf_node_index : leaf_node_indexes) {
         leaf_nodes_x_coord += TreeParams::kNodeOffsetX;
         leaf_nodes_x_coord += TreeParams::kNodeRadius;
+        assert(leaf_node_index < nodes.size());
         nodes[leaf_node_index].coordinates.x = leaf_nodes_x_coord;
         leaf_nodes_x_coord += TreeParams::kNodeRadius;
         leaf_nodes_x_coord += TreeParams::kNodeOffsetX;
