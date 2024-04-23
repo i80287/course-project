@@ -17,6 +17,13 @@ ImGuiFacade::ImGuiFacade(int window_width, int window_height,
       context_manager_(),
       imgui_binder_(glfw_facade_) {}
 
+ImVec2 ImGuiFacade::GetWindowSize() const noexcept {
+    const auto [width, height] = glfw_facade_.GetWindowSize();
+    // We use static cast here because GLFW saves window size as ints
+    //  whereas ImGui saves window size as floats.
+    return {static_cast<float>(width), static_cast<float>(height)};
+}
+
 ImGuiFacade::ImGuiContextManager::ImGuiContextManager() {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();

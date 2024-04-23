@@ -16,7 +16,6 @@
 
 #include "DrawerUtils/Logger.hpp"
 #include "ImGuiExtensions.hpp"
-#include "ImGuiFacade.hpp"
 
 namespace AppSpace::GraphicsUtils {
 
@@ -36,7 +35,7 @@ template <class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 }  // namespace
 
-Drawer::Drawer()
+Drawer::Drawer(ImVec2 window_size)
     : updated_node_in_port_([this](UpdatedNodeInfoPassBy updated_node_info) {
           OnUpdatedNode(std::forward<UpdatedNodeInfoPassBy>(updated_node_info));
       }),
@@ -53,6 +52,7 @@ Drawer::Drawer()
               std::forward<PassingThroughInfoPassBy>(passing_info));
       }) {
     SetupImGuiStyle();
+    ImGui::SetNextWindowSize(window_size, ImGuiCond_FirstUseEver);
     nodes_.reserve(ACTrieModel::kInitialNodesCount);
 }
 
@@ -570,7 +570,8 @@ void Drawer::DrawBadSymbolWindow() {
     ImGui::BeginPopupModal(kBadSymbolModalName);
     bad_symbol_modal_opened_ = true;
     if (is_bad_symbol_found_) {
-        bad_pattern_ = patterns_input_history_.PopAndGetLast();
+        bad_pattern_         = patterns_input_history_.PopAndGetLast();
+        is_bad_symbol_found_ = false;
     }
     ImGui::Text(
         "Incorrect symbol '%c' passed in the pattern %s at position %zu",
@@ -580,7 +581,6 @@ void Drawer::DrawBadSymbolWindow() {
         ImGui::CloseCurrentPopup();
     }
     ImGui::EndPopup();
-    is_bad_symbol_found_ = false;
 }
 
 bool Drawer::AddPatternInput(float text_input_width) {

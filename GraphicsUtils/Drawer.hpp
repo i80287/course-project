@@ -5,7 +5,6 @@
 #include <chrono>
 #include <deque>
 #include <limits>
-#include <map>
 #include <variant>
 
 #include "../App/ACTrie.hpp"
@@ -40,7 +39,7 @@ class Drawer final {
     using PassingThroughObserver    = ACTrieModel::PassingThroughObserver;
 
 public:
-    Drawer();
+    Drawer(ImVec2 window_size);
 
     UpdatedNodeObserver* GetUpdatedNodeObserverPort() noexcept;
     FoundSubstringObserver* GetFoundStringObserverPort() noexcept;
