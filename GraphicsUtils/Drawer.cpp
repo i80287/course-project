@@ -681,7 +681,7 @@ void Drawer::PatternInputImGuiCallback(ImGuiInputTextCallbackData& data) {
             return;
     }
     data.DeleteChars(0, data.BufTextLen);
-    data.InsertChars(0, text.begin(), text.end());
+    data.InsertChars(0, text.data(), text.data() + text.size());
     logger.DebugLog("Updated pattern input box");
 }
 
@@ -703,7 +703,7 @@ void Drawer::TextInputImGuiCallback(ImGuiInputTextCallbackData& data) {
             return;
     }
     data.DeleteChars(0, data.BufTextLen);
-    data.InsertChars(0, text.begin(), text.end());
+    data.InsertChars(0, text.data(), text.data() + text.size());
     logger.DebugLog("Updated text input box");
 }
 
@@ -759,7 +759,7 @@ std::string_view Drawer::TrimSpaces(std::string_view str) noexcept {
     while (r > l && is_space(str[r - 1])) {
         r--;
     }
-    return {str.begin() + l, r - l};
+    return std::string_view(str.data() + l, r - l);
 }
 
 void Drawer::RecalculateAllNodesPositions(std::vector<NodeState>& nodes) {
@@ -965,7 +965,8 @@ void Drawer::DrawEdge(ImDrawList& draw_list, ImVec2 node_center,
                    edge_center_pos.y - edge_rectangle_height *
                                            TreeParams::kEdgeTextPositionScaleY);
         draw_list.AddText(text_pos, Palette::AsImU32::kGreenColor,
-                          edge_text_sv.begin(), edge_text_sv.end());
+                          edge_text_sv.data(),
+                          edge_text_sv.data() + edge_text_sv.size());
     }
 }
 
