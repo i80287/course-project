@@ -49,23 +49,33 @@ On Linux:
 
 After that run build script:
 
-On Windows:
+On Windows when using g++:
 
-    .\build_release.bat
+    .\build_unix_make_release.bat
 
-On Linux:
+On Windows when using vc++ with visual studio 17 (2022):
+
+    .\build_vs17.bat
+
+On Windows when using vc++ with visual studio 16 (2019):
+
+    .\build_vs16.bat
+
+On Linux (g++ or clang++ depending on your CC and CXX env variables):
 
     ./build_release.sh
 
 After that, run the following command to run the application:
 
-On Windows:
+On Windows when using g++:
 
     .\release\vis_actrie_app.exe
 
 On Linux:
 
     ./release/vis_actrie_app
+
+If you are using vc++ with visual studio, build project in the visual studio (.sln file will be generated in the folder "build_vsXX")
 
 ## Configuration update
 
@@ -121,26 +131,35 @@ After that, run the following command to change current directory and enter the 
 
     cd .\course-project
 
-На Linux:
 
     cd ./course-project
 
 После этого запустите сборочный скрипт:
 
-На Windows:
+На Windows при использовании g++:
 
-    .\build_release.bat
+    .\build_unix_make_release.bat
 
-На Linux:
+На Windows при использовании vc++ с visual studio 17 (2022):
+
+    .\build_vs17.bat
+
+На Windows при использовании vc++ с visual studio 16 (2019):
+
+    .\build_vs16.bat
+
+На Linux: (g++ или clang++ в зависимости от ваших CC и CXX переменных окружения):
 
     ./build_release.sh
 
 После этого, выполните команду для запуска собранного приложения:
 
-На Windows:
+На Windows при использовании g++:
 
     .\release\vis_actrie_app.exe
 
 На Linux:
 
     ./release/vis_actrie_app
+
+Если вы используете vc++ с visual studio, соберите проект в visual studio (.sln файл будет сгенерирован в папке "build_vsXX")
