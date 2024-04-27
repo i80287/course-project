@@ -51,12 +51,12 @@ public:
         WordLength word_index = kMissingWord;
 
         VertexIndex operator[](std::size_t index) const noexcept {
-            assert(index < kAlphabetLength);
+            assert(index < edges.size());
             return edges[index];
         }
 
         VertexIndex& operator[](std::size_t index) noexcept {
-            assert(index < kAlphabetLength);
+            assert(index < edges.size());
             return edges[index];
         }
 
@@ -117,6 +117,7 @@ public:
 private:
     static constexpr std::size_t kDefaultNodesCapacity = 16;
     static constexpr WordLength SizeToWordLength(std::size_t size) noexcept;
+    void CreateInitialNodes();
     void NotifyAboutFoundSubstring(VertexIndex current_node_index,
                                    std::size_t position_in_text,
                                    std::string_view text);
@@ -138,8 +139,7 @@ private:
 
     std::vector<ACTNode> nodes_;
     std::vector<WordLength> words_lengths_;
-    bool is_ready_                     = false;
-    bool notified_about_initial_nodes_ = false;
+    bool is_ready_ = false;
     Observable<UpdatedNodeInfo, UpdatedNodeInfoPassBy> updated_nodes_port_;
     Observable<FoundSubstringInfo, FoundSubstringInfoPassBy>
         found_substrings_port_;

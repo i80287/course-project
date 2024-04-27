@@ -39,7 +39,7 @@ public:
         return true;
     }
 
-    constexpr TimeUnit& GetSpeedRef() noexcept {
+    constexpr TimeUnit& GetShowSpeedRef() noexcept {
         return current_show_speed_;
     }
 

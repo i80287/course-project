@@ -323,7 +323,7 @@ void Drawer::DrawACTrieTree(ImVec2 canvas_screen_pos, ImVec2 canvas_end_pos) {
 
     ImGui::PushItemWidth(available_width *
                          CanvasParams::kControllersWidthScaleX);
-    ImGui::SliderInt("Speed", &show_speed_manager_.GetSpeedRef(),
+    ImGui::SliderInt("Speed", &show_speed_manager_.GetShowSpeedRef(),
                      DrawerShowSpeedManager::kMinSpeedUnit,
                      DrawerShowSpeedManager::kMaxSpeedUnit);
     if (is_inputting_text_) {

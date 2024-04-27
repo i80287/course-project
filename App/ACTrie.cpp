@@ -9,15 +9,11 @@ namespace AppSpace::ACTrieDS {
 
 ACTrie::ACTrie() {
     nodes_.reserve(kDefaultNodesCapacity);
-    nodes_.resize(kInitialNodesCount);
-    nodes_[kFakePreRootIndex].edges.fill(kRootIndex);
+    CreateInitialNodes();
 }
 
 ACTrie& ACTrie::AddPattern(std::string_view pattern) {
-    assert(!is_ready_ || notified_about_initial_nodes_);
-    if (!notified_about_initial_nodes_) {
-        NotifyAboutInitialNodes();
-    }
+    assert(!is_ready_);
     if (is_ready_) {
         ResetACTrie();
     }
@@ -64,9 +60,6 @@ ACTrie& ACTrie::AddPattern(std::string_view pattern) {
 
 ACTrie& ACTrie::BuildACTrie() {
     assert(!is_ready_);
-    if (!notified_about_initial_nodes_) {
-        NotifyAboutInitialNodes();
-    }
     nodes_[kRootIndex].suffix_link            = kFakePreRootIndex;
     nodes_[kRootIndex].compressed_suffix_link = kRootIndex;
     NotifyAboutComputedSuffixLinks(kRootIndex, kFakePreRootIndex, '\0');
@@ -83,13 +76,10 @@ ACTrie& ACTrie::BuildACTrie() {
 }
 
 ACTrie& ACTrie::ResetACTrie() {
-    is_ready_                     = false;
-    notified_about_initial_nodes_ = false;
+    is_ready_ = false;
     nodes_.clear();
     words_lengths_.clear();
-    nodes_.resize(kInitialNodesCount);
-    nodes_[kFakePreRootIndex].edges.fill(kRootIndex);
-    NotifyAboutInitialNodes();
+    CreateInitialNodes();
     return *this;
 }
 
@@ -103,13 +93,9 @@ ACTrie& ACTrie::FindAllSubstringsInText(std::string_view text) {
     NotifyAboutPassingThroughNode(current_node_index);
     for (std::size_t i = 0; i < text.size(); i++) {
         VertexIndex symbol_index = SymbolToIndex(text[i]);
-        if (symbol_index >= kAlphabetLength) {
-            current_node_index = kRootIndex;
-            NotifyAboutPassingThroughNode(current_node_index);
-            continue;
-        }
-
-        current_node_index = nodes_[current_node_index][symbol_index];
+        current_node_index       = symbol_index < kAlphabetLength
+                                       ? nodes_[current_node_index][symbol_index]
+                                       : kRootIndex;
         NotifyAboutPassingThroughNode(current_node_index);
         assert(current_node_index != kNullNodeIndex);
         if (nodes_[current_node_index].IsTerminal()) {
@@ -141,6 +127,12 @@ ACTrie& ACTrie::AddSubscriber(BadInputPatternObserver* observer) {
 ACTrie& ACTrie::AddSubscriber(PassingThroughObserver* observer) {
     passing_through_port_.Subscribe(observer);
     return *this;
+}
+
+void ACTrie::CreateInitialNodes() {
+    nodes_.resize(kInitialNodesCount);
+    nodes_[kFakePreRootIndex].edges.fill(kRootIndex);
+    NotifyAboutInitialNodes();
 }
 
 void ACTrie::NotifyAboutFoundSubstring(VertexIndex current_node_index,
@@ -269,11 +261,9 @@ void ACTrie::NotifyAboutComputedSuffixLinks(VertexIndex node_index,
 }
 
 void ACTrie::NotifyAboutInitialNodes() {
-    assert(!notified_about_initial_nodes_);
     NotifyAboutAddedNode(kNullNodeIndex, kNullNodeIndex, '\0');
     NotifyAboutAddedNode(kFakePreRootIndex, kNullNodeIndex, '\0');
     NotifyAboutAddedNode(kRootIndex, kFakePreRootIndex, '\0');
-    notified_about_initial_nodes_ = true;
 }
 
 void ACTrie::NotifyAboutPassingThroughNode(VertexIndex node_index) {
