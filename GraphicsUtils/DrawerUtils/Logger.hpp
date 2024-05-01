@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <source_location>
+#include <string>
 
 namespace AppSpace::GraphicsUtils::DrawerUtils {
 

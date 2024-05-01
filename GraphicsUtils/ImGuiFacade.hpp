@@ -23,6 +23,7 @@ public:
     ImGuiFacade& operator=(const ImGuiFacade&) = delete;
     ImGuiFacade(ImGuiFacade&&)                 = delete;
     ImGuiFacade& operator=(ImGuiFacade&&)      = delete;
+    ImVec2 GetWindowSize() const noexcept;
     /// @brief This function will be called on every iteration of the runtime
     /// loop.
     //

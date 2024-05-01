@@ -38,8 +38,8 @@ public:
 
 private:
     static constexpr Index kInitialPosition = static_cast<Index>(-1);
-    static constexpr Index IndexToSignedIndex(SignedIndex i) noexcept {
-        return static_cast<Index>(i);
+    static constexpr SignedIndex IndexToSignedIndex(Index i) noexcept {
+        return static_cast<SignedIndex>(i);
     }
 
     std::vector<std::string> history_;

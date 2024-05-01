@@ -23,6 +23,13 @@ GLFWFacade::GLFWFacade(int window_width, int window_height,
     glfwMaximizeWindow(GetWindow());
 }
 
+GLFWFacade::WindowSize GLFWFacade::GetWindowSize() const noexcept {
+    int display_w = 0;
+    int display_h = 0;
+    glfwGetFramebufferSize(window_holder_.GetWindow(), &display_w, &display_h);
+    return {.width = display_w, .height = display_h};
+}
+
 bool GLFWFacade::ShouldClose() const noexcept {
     auto window = GetWindow();
     assert(window != nullptr);
@@ -44,19 +51,15 @@ void GLFWFacade::UpdateWindowContext() noexcept {
 }
 
 void GLFWFacade::ClearWindow() const noexcept {
-    int display_w = 0;
-    int display_h = 0;
-    glfwGetFramebufferSize(window_holder_.GetWindow(), &display_w, &display_h);
+    const auto [display_w, display_h] = GetWindowSize();
     assert(glViewport);
     glViewport(0, 0, display_w, display_h);
 
-    constexpr float kScreenClearColorRed   = 0.45f;
-    constexpr float kScreenClearColorGreen = 0.55f;
-    constexpr float kScreenClearColorBlue  = 0.60f;
-    constexpr float kScreenClearColorAlpha = 1.00f;
     assert(glClearColor);
-    glClearColor(kScreenClearColorRed, kScreenClearColorGreen,
-                 kScreenClearColorBlue, kScreenClearColorAlpha);
+    glClearColor(ScreenParams::kScreenClearColorRed,
+                 ScreenParams::kScreenClearColorGreen,
+                 ScreenParams::kScreenClearColorBlue,
+                 ScreenParams::kScreenClearColorAlpha);
     assert(glClear);
     glClear(GL_COLOR_BUFFER_BIT);
 }

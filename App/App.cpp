@@ -2,7 +2,7 @@
 
 namespace AppSpace {
 
-App::App() : model_controller_(&model_) {
+App::App() : view_(imgui_facade_.GetWindowSize()), model_controller_(&model_) {
     model_.AddSubscriber(view_.GetFoundStringObserverPort())
         .AddSubscriber(view_.GetBadInputPatternObserverPort())
         .AddSubscriber(view_.GetUpdatedNodeObserverPort())

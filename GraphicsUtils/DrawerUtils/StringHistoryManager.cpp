@@ -31,6 +31,7 @@ std::string_view StringHistoryManager::MoveToPreviousInputAndRead() noexcept {
     if (IndexToSignedIndex(current_history_position_) < 0) {
         current_history_position_ = history_.size() - 1;
     }
+    assert(current_history_position_ < history_.size());
     return history_[current_history_position_];
 }
 

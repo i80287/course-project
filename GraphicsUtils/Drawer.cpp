@@ -16,7 +16,6 @@
 
 #include "DrawerUtils/Logger.hpp"
 #include "ImGuiExtensions.hpp"
-#include "ImGuiFacade.hpp"
 
 namespace AppSpace::GraphicsUtils {
 
@@ -36,7 +35,7 @@ template <class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 }  // namespace
 
-Drawer::Drawer()
+Drawer::Drawer(ImVec2 window_size)
     : updated_node_in_port_([this](UpdatedNodeInfoPassBy updated_node_info) {
           OnUpdatedNode(std::forward<UpdatedNodeInfoPassBy>(updated_node_info));
       }),
@@ -53,6 +52,7 @@ Drawer::Drawer()
               std::forward<PassingThroughInfoPassBy>(passing_info));
       }) {
     SetupImGuiStyle();
+    ImGui::SetNextWindowSize(window_size, ImGuiCond_FirstUseEver);
     nodes_.reserve(ACTrieModel::kInitialNodesCount);
 }
 
@@ -104,21 +104,9 @@ void Drawer::HandleNextEvent() {
         return;
     }
 
-    const auto time_now = std::chrono::high_resolution_clock::now();
-    const std::chrono::nanoseconds time_since_last_event =
-        time_now - time_since_last_event_handled_;
-
-    assert(DrawerEventHandlingDelayParams::kMinSpeedUnit <= drawer_show_speed_);
-    assert(drawer_show_speed_ <= DrawerEventHandlingDelayParams::kMaxSpeedUnit);
-    const auto delay =
-        DrawerEventHandlingDelayParams::kMaxTimeDelay *
-        (DrawerEventHandlingDelayParams::kMaxSpeedUnit - drawer_show_speed_) /
-        (DrawerEventHandlingDelayParams::kMaxSpeedUnit -
-         DrawerEventHandlingDelayParams::kMinSpeedUnit);
-    if (time_since_last_event <= delay) {
+    if (!show_speed_manager_.ShouldHandleNextEvent()) {
         return;
     }
-    time_since_last_event_handled_ = time_now;
 
     std::visit(overloaded{
                    [this](const CopiedUpdatedNodeInfo& updated_node_info) {
@@ -335,15 +323,27 @@ void Drawer::DrawACTrieTree(ImVec2 canvas_screen_pos, ImVec2 canvas_end_pos) {
 
     ImGui::PushItemWidth(available_width *
                          CanvasParams::kControllersWidthScaleX);
-    ImGui::SliderInt("Speed", &drawer_show_speed_,
-                     DrawerEventHandlingDelayParams::kMinSpeedUnit,
-                     DrawerEventHandlingDelayParams::kMaxSpeedUnit);
+    ImGui::SliderInt("Speed", &show_speed_manager_.GetShowSpeedRef(),
+                     DrawerShowSpeedManager::kMinSpeedUnit,
+                     DrawerShowSpeedManager::kMaxSpeedUnit);
     if (is_inputting_text_) {
         ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Text, TreeParams::kSuffixLinkColor);
         ImGui::Checkbox("Show suffix links to root", &show_root_suffix_links_);
+        ImGui::PopStyleColor();
         ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Text,
+                              TreeParams::kCompressedSuffixLinkColor);
         ImGui::Checkbox("Show compressed suffix links to root",
                         &show_root_compressed_suffix_links_);
+        ImGui::PopStyleColor();
+    }
+
+    const bool changed = ImGui::SliderFloat("Font scale", &font_scale_,
+                                            FontParams::kMinFontScale,
+                                            FontParams::kMaxFontScale);
+    if (changed) {
+        ImGui::SetWindowFontScale(font_scale_);
     }
     ImGui::PopItemWidth();
 
@@ -365,6 +365,7 @@ void Drawer::DrawACTrieTree(ImVec2 canvas_screen_pos, ImVec2 canvas_end_pos) {
 
     const ImVec2 canvas_move_vector =
         canvas_start_pos + scroll_trie_canvas_coordinates_;
+
     for (VertexIndex node_index = ACTrieModel::kRootIndex;
          node_index < nodes_.size(); node_index++) {
         const NodeState& node_state = nodes_[node_index];
@@ -375,17 +376,31 @@ void Drawer::DrawACTrieTree(ImVec2 canvas_screen_pos, ImVec2 canvas_end_pos) {
             continue;
         }
 
-        draw_list.AddCircle(node_center, TreeParams::kNodeRadius,
-                            Palette::AsImU32::kBlackColor);
-        if (node_state.node.IsTerminal()) {
-            DrawTerminalNodeSign(draw_list, node_center);
-        }
-
         DrawEdgesBetweenNodeAndChildren(draw_list, node_index,
                                         canvas_move_vector, canvas_start_pos,
                                         canvas_end_pos);
         DrawSuffixLinksForNode(draw_list, node_index, canvas_move_vector,
                                canvas_start_pos, canvas_end_pos);
+    }
+
+    for (VertexIndex node_index = ACTrieModel::kRootIndex;
+         node_index < nodes_.size(); node_index++) {
+        const NodeState& node_state = nodes_[node_index];
+        assert(node_state.coordinates != TreeParams::kNodeInvalidCoordinates);
+        const ImVec2 node_center = node_state.coordinates + canvas_move_vector;
+
+        if (!NodeFitsInCanvas(node_center, canvas_start_pos, canvas_end_pos)) {
+            continue;
+        }
+
+        draw_list.AddCircleFilled(node_center, TreeParams::kNodeRadius,
+                                  Palette::AsImU32::kDarkGreenColor);
+        draw_list.AddCircle(node_center, TreeParams::kNodeRadius,
+                            Palette::AsImU32::kBlackColor, 0,
+                            TreeParams::kNodeThickness);
+        if (node_state.node.IsTerminal()) {
+            DrawTerminalNodeSign(draw_list, node_center);
+        }
     }
 
     if (passing_through_node_index_ == ACTrieModel::kNullNodeIndex) {
@@ -570,7 +585,8 @@ void Drawer::DrawBadSymbolWindow() {
     ImGui::BeginPopupModal(kBadSymbolModalName);
     bad_symbol_modal_opened_ = true;
     if (is_bad_symbol_found_) {
-        bad_pattern_ = patterns_input_history_.PopAndGetLast();
+        bad_pattern_         = patterns_input_history_.PopAndGetLast();
+        is_bad_symbol_found_ = false;
     }
     ImGui::Text(
         "Incorrect symbol '%c' passed in the pattern %s at position %zu",
@@ -580,7 +596,6 @@ void Drawer::DrawBadSymbolWindow() {
         ImGui::CloseCurrentPopup();
     }
     ImGui::EndPopup();
-    is_bad_symbol_found_ = false;
 }
 
 bool Drawer::AddPatternInput(float text_input_width) {
@@ -666,7 +681,7 @@ void Drawer::PatternInputImGuiCallback(ImGuiInputTextCallbackData& data) {
             return;
     }
     data.DeleteChars(0, data.BufTextLen);
-    data.InsertChars(0, text.begin(), text.end());
+    data.InsertChars(0, text.data(), text.data() + text.size());
     logger.DebugLog("Updated pattern input box");
 }
 
@@ -688,16 +703,15 @@ void Drawer::TextInputImGuiCallback(ImGuiInputTextCallbackData& data) {
             return;
     }
     data.DeleteChars(0, data.BufTextLen);
-    data.InsertChars(0, text.begin(), text.end());
+    data.InsertChars(0, text.data(), text.data() + text.size());
     logger.DebugLog("Updated text input box");
 }
 
 void Drawer::ClearStateAndNotify() {
-    drawer_show_speed_          = DrawerEventHandlingDelayParams::kMinSpeedUnit;
-    passing_through_node_index_ = ACTrieModel::kNullNodeIndex;
-    found_word_node_index_      = ACTrieModel::kNullNodeIndex;
-    is_no_resize_               = false;
-    is_no_decoration_           = false;
+    passing_through_node_index_        = ACTrieModel::kNullNodeIndex;
+    found_word_node_index_             = ACTrieModel::kNullNodeIndex;
+    is_no_resize_                      = false;
+    is_no_decoration_                  = false;
     is_window_rounding_disabled_       = false;
     is_scroll_patterns_to_bottom_      = false;
     is_patterns_auto_scroll_           = true;
@@ -745,7 +759,7 @@ std::string_view Drawer::TrimSpaces(std::string_view str) noexcept {
     while (r > l && is_space(str[r - 1])) {
         r--;
     }
-    return {str.begin() + l, r - l};
+    return std::string_view(str.data() + l, r - l);
 }
 
 void Drawer::RecalculateAllNodesPositions(std::vector<NodeState>& nodes) {
@@ -770,6 +784,7 @@ void Drawer::RecalculateAllNodesPositions(std::vector<NodeState>& nodes) {
     for (VertexIndex leaf_node_index : leaf_node_indexes) {
         leaf_nodes_x_coord += TreeParams::kNodeOffsetX;
         leaf_nodes_x_coord += TreeParams::kNodeRadius;
+        assert(leaf_node_index < nodes.size());
         nodes[leaf_node_index].coordinates.x = leaf_nodes_x_coord;
         leaf_nodes_x_coord += TreeParams::kNodeRadius;
         leaf_nodes_x_coord += TreeParams::kNodeOffsetX;
@@ -950,7 +965,8 @@ void Drawer::DrawEdge(ImDrawList& draw_list, ImVec2 node_center,
                    edge_center_pos.y - edge_rectangle_height *
                                            TreeParams::kEdgeTextPositionScaleY);
         draw_list.AddText(text_pos, Palette::AsImU32::kGreenColor,
-                          edge_text_sv.begin(), edge_text_sv.end());
+                          edge_text_sv.data(),
+                          edge_text_sv.data() + edge_text_sv.size());
     }
 }
 
@@ -987,8 +1003,9 @@ void Drawer::DrawSuffixLinksForNode(ImDrawList& draw_list,
             nodes_[suffix_link].coordinates + canvas_move_vector;
         if (NodeFitsInCanvas(sl_node_center, canvas_start_pos,
                              canvas_end_pos)) {
-            DrawEdge(draw_list, node_center, sl_node_center, '\0',
-                     Palette::AsImU32::kBlueColor);
+            DrawSuffixLink(draw_list, node_center, sl_node_center,
+                           TreeParams::kSuffixLinkCenterMoveVector,
+                           TreeParams::kSuffixLinkColor);
         }
     }
 
@@ -999,10 +1016,20 @@ void Drawer::DrawSuffixLinksForNode(ImDrawList& draw_list,
             nodes_[compressed_suffix_link].coordinates + canvas_move_vector;
         if (NodeFitsInCanvas(csl_node_center, canvas_start_pos,
                              canvas_end_pos)) {
-            DrawEdge(draw_list, node_center, csl_node_center, '\0',
-                     Palette::AsImU32::kGreenColor);
+            DrawSuffixLink(draw_list, node_center, csl_node_center,
+                           TreeParams::kCompressedSuffixLinkCenterMoveVector,
+                           TreeParams::kCompressedSuffixLinkColor);
         }
     }
+}
+
+void Drawer::DrawSuffixLink(ImDrawList& draw_list, ImVec2 node_center,
+                            ImVec2 suf_link_node_center,
+                            ImVec2 suf_link_move_vector,
+                            ImU32 suf_link_color) const {
+    draw_list.AddLine(node_center + suf_link_move_vector,
+                      suf_link_node_center + suf_link_move_vector,
+                      suf_link_color, TreeParams::kEdgeThickness);
 }
 
 bool Drawer::NodeFitsInCanvas(ImVec2 node_center, ImVec2 canvas_start_pos,
