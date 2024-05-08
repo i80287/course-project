@@ -2,5 +2,5 @@
 
 mkdir -p build_debug
 cd ./build_debug || exit
-cmake -S .. -B . -DCMAKE_BUILD_TYPE=Debug
+cmake -DCMAKE_BUILD_TYPE=Debug -S .. -B .
 make --jobs "$(nproc)"
