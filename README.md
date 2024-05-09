@@ -49,15 +49,15 @@ On Linux:
 
 After that run build script:
 
-On Windows when using g++:
+On Windows when using g++ with make:
 
     .\build_unix_make_release.bat
 
-On Windows when using vc++ with visual studio 17 (2022):
+On Windows when using vc++ with Visual Studio 17 (2022):
 
     .\build_vs17.bat
 
-On Windows when using vc++ with visual studio 16 (2019):
+On Windows when using vc++ with Visual Studio 16 (2019):
 
     .\build_vs16.bat
 
@@ -67,21 +67,27 @@ On Linux (g++ or clang++ depending on your CC and CXX env variables):
 
 After that, run the following command to run the application:
 
-On Windows when using g++:
+On Windows when using g++ with make:
 
-    .\release\vis_actrie_app.exe
+    .\build_release\vis_actrie_app.exe
 
 On Linux:
 
-    ./release/vis_actrie_app
+    ./build_release/vis_actrie_app
 
-If you are using vc++ with visual studio, build project in the visual studio (.sln file will be generated in the folder "build_vsXX")
+If you are using vc++ with Visual Studio, build project in the Visual Studio (.sln file will be generated in the folder "build_vsXX")
 
 ## Configuration update
 
 To change generator used by the cmake you can specify argument -G in the build scripts
 
-To change cmake configuration you can 
+For example, see build_unix_make_release.bat and build_vs17.bat
+
+To change compiler options for each compiler (GCC, Intel, MSVC, Clang with MSVC frontend, Clang with GNU frontend, Clang with Apple frontend) you can modify target_compile_options and target_compile_definitions in the CMakeLists.txt in the appropriate section
+
+By default, additional warnings are set in target_compile_options when compiling with GCC
+
+Flag `VIS_ACTRIE_APP_STATIC_LINK_GCC_STD_WINPTHREAD` can be set to `ON` to statically link c and c++ standart libraries and win pthread library when compiling with GCC on Windows. This option is set to `OFF` by default but set to `ON` in `build_unix_make_debug.bat` and `build_unix_make_release.bat`
 
 # Визуализация структур данных и алгоритмов
 
@@ -136,15 +142,15 @@ After that, run the following command to change current directory and enter the 
 
 После этого запустите сборочный скрипт:
 
-На Windows при использовании g++:
+На Windows при использовании g++ и make:
 
     .\build_unix_make_release.bat
 
-На Windows при использовании vc++ с visual studio 17 (2022):
+На Windows при использовании vc++ с Visual Studio 17 (2022):
 
     .\build_vs17.bat
 
-На Windows при использовании vc++ с visual studio 16 (2019):
+На Windows при использовании vc++ с Visual Studio 16 (2019):
 
     .\build_vs16.bat
 
@@ -154,12 +160,12 @@ After that, run the following command to change current directory and enter the 
 
 После этого, выполните команду для запуска собранного приложения:
 
-На Windows при использовании g++:
+На Windows при использовании g++ и make:
 
-    .\release\vis_actrie_app.exe
+    .\build_release\vis_actrie_app.exe
 
 На Linux:
 
-    ./release/vis_actrie_app
+    ./build_release/vis_actrie_app
 
-Если вы используете vc++ с visual studio, соберите проект в visual studio (.sln файл будет сгенерирован в папке "build_vsXX")
+Если вы используете vc++ с Visual Studio, соберите проект в Visual Studio (.sln файл будет сгенерирован в папке "build_vsXX")

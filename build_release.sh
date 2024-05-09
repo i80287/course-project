@@ -1,6 +1,6 @@
 #! /bin/sh
 
-mkdir -p build_release_unix
-cd ./build_release_unix || exit
+mkdir -p build_release
+cd ./build_release || exit
 cmake -DCMAKE_BUILD_TYPE=Release -S .. -B .
 make --jobs "$(nproc)"
